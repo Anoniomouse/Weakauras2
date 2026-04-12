@@ -85,6 +85,7 @@ local backgroundAlias = {
 	-- DH
 	[577] = "talents-background-demonhunter-havoc",
 	[581] = "talents-background-demonhunter-vengeance",
+	[1480] = "talents-background-demonhunter-devourer",
 
 	-- Druid
 	[102] = "talents-background-druid-balance",
@@ -95,6 +96,7 @@ local backgroundAlias = {
 	-- Evoker
 	[1467] = "talents-background-evoker-devastation",
 	[1468] = "talents-background-evoker-preservation",
+	[1473] = "talents-background-evoker-augmentation",
 
 	-- Hunter
 	[253] = "talents-background-hunter-beastmastery",

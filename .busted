@@ -1,0 +1,14 @@
+return {
+  default = {
+    verbose = true,
+    lpath = "?.lua;?/init.lua",
+    pattern = "test_",
+    tags = {},
+  },
+  midnight = {
+    verbose = true,
+    lpath = "?.lua;?/init.lua",
+    pattern = "tests/midnight/test_",
+    tags = { "midnight" },
+  },
+}

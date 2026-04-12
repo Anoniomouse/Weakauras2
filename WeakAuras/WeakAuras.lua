@@ -1444,6 +1444,11 @@ loadedFrame:SetScript("OnEvent", function(self, event, ...)
       callback = CreatePvPTalentCache;
     elseif(event == "ACTIVE_TALENT_GROUP_CHANGED" or event == "CHARACTER_POINTS_CHANGED" or event == "SPELLS_CHANGED") then
       callback = CreateTalentCache;
+    elseif event == "ADDON_RESTRICTION_STATE_CHANGED" then
+      -- Midnight: re-scan loads when addon restriction state changes (combat, encounter, etc.)
+      callback = function()
+        Private.ScanForLoads(nil, "ADDON_RESTRICTION_STATE_CHANGED")
+      end
     elseif(event == "PLAYER_REGEN_ENABLED") then
       callback = function()
         if (queueshowooc) then
@@ -1912,6 +1917,12 @@ if WeakAuras.IsRetail() then
     Private.ScanForLoads(nil, "WA_DRAGONRIDING_UPDATE")
     Private.StopProfileSystem("load");
   end)
+end
+
+if WeakAuras.IsMidnight() then
+  -- In Midnight, addon restrictions (combat, encounter, etc.) can change what APIs return.
+  -- Re-scan loads when restriction state changes so condition-dependent auras update correctly.
+  loadFrame:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
 end
 
 local unitLoadFrame = CreateFrame("Frame");
@@ -5858,11 +5869,20 @@ function Private.ensurePRDFrame()
       end
       personalRessourceDisplayFrame.texture:SetTexture("Interface\\AddOns\\WeakAuras\\Media\\Textures\\PRDFrameKui");
     else
-      local namePlateVerticalScale = tonumber(GetCVar("NamePlateVerticalScale"));
+      -- In Midnight, NamePlateVerticalScale/NamePlateHorizontalScale CVars were
+      -- replaced by a single nameplateSize enum. Use GetNamePlateScale() instead.
+      local namePlateVerticalScale, horizontalScale
+      if WeakAuras.IsMidnight() and NamePlateDriverFrame and NamePlateDriverFrame.GetNamePlateScale then
+        local namePlateScale = NamePlateDriverFrame:GetNamePlateScale()
+        namePlateVerticalScale = (namePlateScale and namePlateScale.vertical) or 1.0
+        horizontalScale = (namePlateScale and namePlateScale.horizontal) or 1.0
+      else
+        namePlateVerticalScale = tonumber(GetCVar("NamePlateVerticalScale")) or 1.0
+        horizontalScale = tonumber(GetCVar("NamePlateHorizontalScale")) or 1.0
+      end
       local zeroBasedScale = namePlateVerticalScale - 1.0;
       local clampedZeroBasedScale = Saturate(zeroBasedScale);
-      local horizontalScale = tonumber(GetCVar("NamePlateHorizontalScale"));
-      local baseNamePlateWidth = NamePlateDriverFrame.baseNamePlateWidth;
+      local baseNamePlateWidth = NamePlateDriverFrame.baseNamePlateWidth or 230;
       prdWidth = baseNamePlateWidth * horizontalScale * Lerp(1.1, 1.0, clampedZeroBasedScale) - 24;
       prdHeight = 4 * namePlateVerticalScale * Lerp(1.2, 1.0, clampedZeroBasedScale) * 2  + 1;
       personalRessourceDisplayFrame:SetScale(1 / UIParent:GetEffectiveScale());

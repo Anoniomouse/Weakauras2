@@ -54,8 +54,11 @@ if WeakAuras.IsRetail() then
   local LibDispell = LibStub("LibDispel-1.0")
   FixDebuffClass = function(debuffClass, spellId)
     if debuffClass == nil then
-      local bleedList = LibDispell:GetBleedList()
-      if bleedList[spellId] then
+      local bleedList = LibDispell.GetBleedList and LibDispell:GetBleedList() or {}
+      -- On Midnight, spellId from ForEachAura is a secret value when the unit is
+      -- aura-restricted; using it as a table key raises "table index is secret".
+      local ok, isBleed = pcall(function() return bleedList[spellId] end)
+      if ok and isBleed then
         debuffClass = "bleed"
       else
         debuffClass = "none"
@@ -81,12 +84,35 @@ else
 end
 
 
+-- On Midnight, aura data fields (name, spellId, etc.) are "secret" values when the unit
+-- is aura-restricted. Secret values raise errors when used as table keys, in comparisons,
+-- or in arithmetic. Wrap ForEachAura callbacks with this helper so those errors are
+-- silently swallowed instead of spamming the error console.
+local function makeSecretSafe(fn)
+  if not WeakAuras.IsMidnight() then
+    return fn
+  end
+  return function(...)
+    local ok, err = pcall(fn, ...)
+    if not ok and err then
+      -- Case-insensitive: matches "secret", "Secret", "ForceTaint", etc.
+      -- Covers: "table index is secret", "Secret values are only allowed during untainted execution"
+      local errLower = err:lower()
+      if not (errLower:find("secret", 1, true) or errLower:find("forcetaint", 1, true) or errLower:find("untainted", 1, true)) then
+        error(err, 2)
+      end
+    end
+  end
+end
+
 -- Lua APIs
 local tinsert, wipe = table.insert, wipe
 local pairs, next, type = pairs, next, type
 local UnitAura = UnitAura
 
 local newAPI = WeakAuras.IsRetail()
+local CLEU_EVENT = WeakAuras.CLEU_EVENT
+local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo or (C_CombatLogInternal and C_CombatLogInternal.GetCurrentEventInfo)
 
 ---@class WeakAuras
 local WeakAuras = WeakAuras
@@ -142,6 +168,11 @@ local matchDataByTrigger = {}
 local matchDataChanged = {}
 
 local nameplateExists = {}
+
+-- Midnight: tracks which AddOnRestrictionType values are currently activating/active.
+-- When any entry is present, ForEachAura data is secret and scanning must be skipped.
+-- Keyed by restriction type (0=Combat,1=Encounter,2=ChallengeMode,3=PvPMatch,4=Map).
+local activeRestrictionTypes = {}
 local unitVisible = {}
 
 -- Returns whether a unit id exists. If it exists, the GUID is returned
@@ -151,6 +182,11 @@ local unitVisible = {}
 local function UnitExistsFixed(unit)
   if #unit > 9 and unit:sub(1, 9) == "nameplate" then
     return nameplateExists[unit] or false
+  end
+  -- In Midnight, UnitGUID returns a secret string that can't be compared.
+  -- Fall back to a plain boolean so existingUnits comparisons don't taint.
+  if WeakAuras.IsMidnight() then
+    return UnitExists(unit) or false
   end
   return UnitExists(unit) and UnitGUID(unit) or false
 end
@@ -1768,6 +1804,7 @@ do
     local debuffClass = FixDebuffClass(aura.dispelName, aura.spellId)
     UpdateMatchData(_time, matchDataChanged, _unit, nil, aura.auraInstanceID, _filter, aura.name, aura.icon, aura.applications, debuffClass, aura.duration, aura.expirationTime, aura.sourceUnit, aura.isStealable, aura.isBossAura, aura.isFromPlayerOrPlayerPet, aura.spellId, aura.timeMod, aura.points)
   end
+  HandleAura = makeSecretSafe(HandleAura)
 
   PrepareMatchData = function(unit, filter)
     if not matchDataUpToDate[unit] or not matchDataUpToDate[unit][filter] then
@@ -1900,6 +1937,7 @@ do
       CheckScanFuncs(_scanFuncGeneralGroup, _unit, _filter, auraInstanceID)
     end
   end
+  HandleAura = makeSecretSafe(HandleAura)
 
   ScanUnitWithFilter = function(matchDataChanged, time, unit, filter, unitAuraUpdateInfo,
     scanFuncNameGroup, scanFuncSpellIdGroup, scanFuncGeneralGroup,
@@ -1917,46 +1955,74 @@ do
         -- copy parameters passed to ScanUnitWithFilter in parent's scope for HandleAura
         _matchDataChanged, _time, _unit, _filter, _scanFuncNameGroup, _scanFuncSpellIdGroup, _scanFuncGeneralGroup, _scanFuncName, _scanFuncSpellId, _scanFuncGeneral = matchDataChanged, time, unit, filter, scanFuncNameGroup, scanFuncSpellIdGroup, scanFuncGeneralGroup, scanFuncName, scanFuncSpellId, scanFuncGeneral
         if unitAuraUpdateInfo then
-          -- incremental
-          if unitAuraUpdateInfo.addedAuras ~= nil then
-            for _, aura in ipairs(unitAuraUpdateInfo.addedAuras) do
-              if (aura.isHelpful and filter == "HELPFUL") or (aura.isHarmful and filter == "HARMFUL") then
-                HandleAura(aura)
+          -- In Midnight, aura boolean fields (isHelpful/isHarmful) in addedAuras are
+          -- secret and can't be tested. GetAuraDataByAuraInstanceID also requires the
+          -- caller to be untainted. AuraUtil.ForEachAura uses GetAuraDataBySlot which
+          -- is AllowedWhenTainted and returns real data. Fall back to a full scan
+          -- whenever there are added auras on Midnight.
+          -- On Midnight, all incremental paths (addedAuras, updatedAuraInstanceIDs) rely on
+          -- GetAuraDataByAuraInstanceID which requires AllowedWhenUntainted. WeakAuras can
+          -- be tainted, making that API return secret data. Always use the full scan
+          -- (AuraUtil.ForEachAura / GetAuraDataBySlot, which is AllowedWhenTainted) instead.
+          local midnightForceFull = WeakAuras.IsMidnight()
+
+          if midnightForceFull then
+            -- When any addon restriction is active, all aura data fields returned by
+            -- ForEachAura (GetAuraDataBySlot) are secret values. We cannot use them as
+            -- table keys or in comparisons without erroring. Skip the scan entirely and
+            -- preserve the last known match data so auras don't disappear mid-encounter.
+            -- ADDON_RESTRICTION_STATE_CHANGED with state=Inactive triggers a fresh rescan.
+            if next(activeRestrictionTypes) then
+              return
+            end
+            -- full scan covers additions, updates, and removals
+            CleanUpOutdatedMatchData(nil, unit, filter)
+            AuraUtil.ForEachAura(unit, filter, nil, HandleAura, true)
+          else
+            -- incremental
+            if unitAuraUpdateInfo.addedAuras ~= nil then
+              for _, aura in ipairs(unitAuraUpdateInfo.addedAuras) do
+                if (aura.isHelpful and filter == "HELPFUL") or (aura.isHarmful and filter == "HARMFUL") then
+                  HandleAura(aura)
+                end
               end
             end
-          end
 
-          if unitAuraUpdateInfo.updatedAuraInstanceIDs ~= nil then
-            for _, auraInstanceID in ipairs(unitAuraUpdateInfo.updatedAuraInstanceIDs) do
-              local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID)
-              if aura and ((aura.isHelpful and filter == "HELPFUL") or (aura.isHarmful and filter == "HARMFUL")) then
-                HandleAura(aura)
+            if unitAuraUpdateInfo.updatedAuraInstanceIDs ~= nil then
+              for _, auraInstanceID in ipairs(unitAuraUpdateInfo.updatedAuraInstanceIDs) do
+                local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID)
+                if aura and ((aura.isHelpful and filter == "HELPFUL") or (aura.isHarmful and filter == "HARMFUL")) then
+                  HandleAura(aura)
+                end
               end
             end
-          end
 
-          if unitAuraUpdateInfo.removedAuraInstanceIDs ~= nil then
-            for _, auraInstanceID in ipairs(unitAuraUpdateInfo.removedAuraInstanceIDs) do
-              if matchData[unit] and matchData[unit][filter] then
-                local data = matchData[unit][filter][auraInstanceID]
-                if data then
-                  matchData[unit][filter][auraInstanceID] = nil
-                  for id, triggerData in pairs(data.auras) do
-                    for triggernum in pairs(triggerData) do
-                      matchDataByTrigger[id][triggernum][unit][auraInstanceID] = nil
-                      matchDataChanged[id] = matchDataChanged[id] or {}
-                      matchDataChanged[id][triggernum] = true
+            if unitAuraUpdateInfo.removedAuraInstanceIDs ~= nil then
+              for _, auraInstanceID in ipairs(unitAuraUpdateInfo.removedAuraInstanceIDs) do
+                if matchData[unit] and matchData[unit][filter] then
+                  local data = matchData[unit][filter][auraInstanceID]
+                  if data then
+                    matchData[unit][filter][auraInstanceID] = nil
+                    for id, triggerData in pairs(data.auras) do
+                      for triggernum in pairs(triggerData) do
+                        matchDataByTrigger[id][triggernum][unit][auraInstanceID] = nil
+                        matchDataChanged[id] = matchDataChanged[id] or {}
+                        matchDataChanged[id][triggernum] = true
+                      end
                     end
-                  end
-                  if data.dataInstanceID then
-                    TooltipHelper:Untrack(data.dataInstanceID, data)
+                    if data.dataInstanceID then
+                      TooltipHelper:Untrack(data.dataInstanceID, data)
+                    end
                   end
                 end
               end
             end
           end
         else
-          -- full
+          -- full scan (no unitAuraUpdateInfo)
+          if WeakAuras.IsMidnight() and next(activeRestrictionTypes) then
+            return
+          end
           -- clean first
           CleanUpOutdatedMatchData(nil, unit, filter)
           AuraUtil.ForEachAura(unit, filter, nil, HandleAura, true)
@@ -2233,7 +2299,9 @@ local function EventHandler(frame, event, arg1, arg2, ...)
       end
     end
   elseif event == "NAME_PLATE_UNIT_ADDED" then
-    nameplateExists[arg1] = UnitGUID(arg1)
+    -- On Midnight, UnitGUID returns a secret value for nameplates while restricted.
+    -- Store a plain boolean instead so comparisons with nameplateExists don't error.
+    nameplateExists[arg1] = WeakAuras.IsMidnight() and true or UnitGUID(arg1)
     RecheckActiveForUnitType("nameplate", arg1, deactivatedTriggerInfos)
   elseif event == "NAME_PLATE_UNIT_REMOVED" then
     nameplateExists[arg1] = false
@@ -2287,6 +2355,22 @@ local function EventHandler(frame, event, arg1, arg2, ...)
   elseif event == "UNIT_ENTERED_VEHICLE" or event == "UNIT_EXITED_VEHICLE" then
     if arg1 == "player" then
       ScanGroupUnit(time, matchDataChanged, nil, "vehicle")
+    end
+  elseif event == "ADDON_RESTRICTION_STATE_CHANGED" then
+    -- arg1 = AddOnRestrictionType (0=Combat,1=Encounter,2=ChallengeMode,3=PvPMatch,4=Map)
+    -- arg2 = AddOnRestrictionState (0=Inactive, 1=Activating, 2=Active)
+    -- Activating (1) fires BEFORE the restriction is enforced.
+    -- Inactive  (0) fires AFTER the restriction has been deactivated.
+    if arg2 == 1 then  -- Activating: mark this restriction type as active
+      activeRestrictionTypes[arg1] = true
+    elseif arg2 == 0 then  -- Inactive: this restriction type is gone
+      activeRestrictionTypes[arg1] = nil
+      if not next(activeRestrictionTypes) then
+        -- All restrictions lifted — do a full rescan to refresh aura data
+        for unit in pairs(matchData) do
+          ScanUnit(time, unit)
+        end
+      end
     end
   elseif event == "UNIT_AURA" then
     if brokenUnitMap[arg1] and not UnitExists(arg1) then
@@ -2393,6 +2477,11 @@ Buff2Frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 Buff2Frame:RegisterEvent("PARTY_MEMBER_DISABLE")
 Buff2Frame:RegisterEvent("PARTY_MEMBER_ENABLE")
 Buff2Frame:RegisterEvent("UNIT_TARGETABLE_CHANGED")
+if WeakAuras.IsMidnight() then
+  -- Track when addon restrictions become active/inactive so we can skip scanning
+  -- restricted units (whose aura data fields are secret) and rescan when safe.
+  Buff2Frame:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
+end
 Buff2Frame:SetScript("OnEvent", EventHandler)
 
 -- For UNIT_IN_RANGE_UPDATE Blizzard apparently checks whether anyone
@@ -4102,6 +4191,7 @@ do
       return changed
     end
   end
+  HandleAura = makeSecretSafe(HandleAura)
 
   AugmentMatchDataMulti = function(matchData, unit, filter, sourceGUID, nameKey, spellKey)
     if newAPI then
@@ -4227,6 +4317,7 @@ do
       end
     end
   end
+  HandleAura = makeSecretSafe(HandleAura)
 
   CheckAurasMulti = function(base, unit, filter)
     if newAPI then
@@ -4284,7 +4375,7 @@ end
 function BuffTrigger.InitMultiAura()
   if not multiAuraFrame then
     multiAuraFrame = CreateFrame("Frame")
-    multiAuraFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    multiAuraFrame:RegisterEvent(CLEU_EVENT)
     multiAuraFrame:RegisterEvent("UNIT_TARGET")
     multiAuraFrame:RegisterEvent("UNIT_AURA")
     multiAuraFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
@@ -4304,7 +4395,7 @@ end
 function BuffTrigger.HandleMultiEvent(frame, event, ...)
   local system = "bufftrigger2 - multi - " .. event
   Private.StartProfileSystem(system)
-  if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+  if event == CLEU_EVENT then
     CombatLog(CombatLogGetCurrentEventInfo())
   elseif event == "UNIT_TARGET" then
     TrackUid(...)

@@ -574,6 +574,12 @@ WeakAuras.prettyPrint = function(...)
   print("|cff9900ffWeakAuras:|r ", ...)
 end
 
+-- In Midnight, COMBAT_LOG_EVENT_UNFILTERED is restricted to secure addons.
+-- C_CombatLogInternal provides the unrestricted equivalent for all addons.
+-- Use IsMidnight() as the primary check because C_CombatLogInternal may be nil
+-- at addon load time even on Midnight builds.
+WeakAuras.CLEU_EVENT = (WeakAuras.IsMidnight() or C_CombatLogInternal) and "COMBAT_LOG_EVENT_INTERNAL_UNFILTERED" or "COMBAT_LOG_EVENT_UNFILTERED"
+
 -- Force enable WeakAurasCompanion and Archive because some addon managers interfere with it
 C_AddOns.EnableAddOn("WeakAurasCompanion")
 C_AddOns.EnableAddOn("WeakAurasArchive")
@@ -662,15 +668,6 @@ end
 if WeakAuras.IsWrathClassic() then
   C_Timer.After(1, function()
     WeakAuras.prettyPrint("This version of WeakAuras is provided as is. We are unable to test it ourselves on CN Servers.")
-  end)
-elseif WeakAuras.IsMidnight() then
-  C_Timer.After(1, function()
-    WeakAuras.prettyPrint("WeakAuras does not support Midnight due to Blizzard restricting addons. Read more at https://patreon.com/WeakAuras")
-  end)
-  libsAreOk = false
-elseif WeakAuras.IsTWW() then
-  C_Timer.After(1, function()
-    WeakAuras.prettyPrint("WeakAuras does not support Midnight due to Blizzard's new addon restrictions. Read more at https://patreon.com/WeakAuras")
   end)
 end
 

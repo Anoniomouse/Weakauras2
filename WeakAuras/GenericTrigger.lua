@@ -55,7 +55,8 @@ local Private = select(2, ...)
 local tinsert, tconcat, wipe = table.insert, table.concat, wipe
 local tostring, pairs, type = tostring, pairs, type
 local error = error
-local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo;
+local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo or (C_CombatLogInternal and C_CombatLogInternal.GetCurrentEventInfo);
+local CLEU_EVENT = WeakAuras.CLEU_EVENT;
 
 -- WoW APIs
 local IsPlayerMoving = IsPlayerMoving
@@ -644,9 +645,38 @@ local function ignoreErrorHandler()
 
 end
 
+-- In Midnight, APIs such as UnitHealth on restricted units return "secret" tainted
+-- values. Doing arithmetic on them raises a taint error. During OPTIONS/fake-states
+-- preview this is expected and not actionable by the user, so suppress those errors
+-- while still reporting genuine Lua errors.
+local function makeTaintAwareErrorHandler(baseHandler)
+  return function(errorMessage)
+    if errorMessage then
+      local msgLower = errorMessage:lower()
+      if msgLower:find("secret", 1, true) or msgLower:find("forcetaint", 1, true) or msgLower:find("untainted", 1, true) then
+        return
+      end
+    end
+    baseHandler(errorMessage)
+  end
+end
+
+local function getOptionsErrorHandler(optionsEvent, data, id, context)
+  if not optionsEvent then
+    return Private.GetErrorHandlerId(id, context)
+  end
+  if data.ignoreOptionsEventErrors then
+    return ignoreErrorHandler
+  end
+  if WeakAuras.IsMidnight() then
+    return makeTaintAwareErrorHandler(Private.GetErrorHandlerId(id, context))
+  end
+  return Private.GetErrorHandlerId(id, context)
+end
+
 local function RunTriggerFunc(allStates, data, id, triggernum, event, arg1, arg2, ...)
   local optionsEvent = event == "OPTIONS";
-  local errorHandler = (optionsEvent and data.ignoreOptionsEventErrors) and ignoreErrorHandler or Private.GetErrorHandlerId(id, L["Trigger %s"]:format(triggernum))
+  local errorHandler = getOptionsErrorHandler(optionsEvent, data, id, L["Trigger %s"]:format(triggernum))
   local updateTriggerState = false;
 
   local unitForUnitTrigger
@@ -898,7 +928,7 @@ function Private.ScanEvents(event, arg1, arg2, ...)
     Private.StopProfileSystem("generictrigger " .. system)
     return
   end
-  if(event == "COMBAT_LOG_EVENT_UNFILTERED") then
+  if(event == CLEU_EVENT) then
     local arg1, arg2 = CombatLogGetCurrentEventInfo();
 
     event_list = event_list[arg2];
@@ -1227,7 +1257,7 @@ function HandleEvent(frame, event, arg1, arg2, ...)
   end
 
   if not(WeakAuras.IsPaused()) then
-    if(event == "COMBAT_LOG_EVENT_UNFILTERED") then
+    if(event == CLEU_EVENT) then
       Private.ScanEvents(event);
     else
       Private.ScanEvents(event, arg1, arg2, ...);
@@ -1289,7 +1319,7 @@ function GenericTrigger.UnloadDisplays(toUnload)
   for id in pairs(toUnload) do
     loaded_auras[id] = nil
     for eventname, events in pairs(loaded_events) do
-      if(eventname == "COMBAT_LOG_EVENT_UNFILTERED") then
+      if(eventname == CLEU_EVENT) then
         for subeventname, subevents in pairs(events) do
           subevents[id] = nil;
         end
@@ -1333,7 +1363,7 @@ function GenericTrigger.Rename(oldid, newid)
   events[oldid] = nil;
 
   for eventname, events in pairs(loaded_events) do
-    if(eventname == "COMBAT_LOG_EVENT_UNFILTERED") then
+    if(eventname == CLEU_EVENT) then
       for subeventname, subevents in pairs(events) do
         subevents[oldid] = subevents[newid];
         subevents[oldid] = nil;
@@ -1427,7 +1457,7 @@ function LoadEvent(id, triggernum, data)
   if data.events then
     for index, event in pairs(data.events) do
       loaded_events[event] = loaded_events[event] or {};
-      if(event == "COMBAT_LOG_EVENT_UNFILTERED" and data.subevents) then
+      if(event == CLEU_EVENT and data.subevents) then
         for i, subevent in pairs(data.subevents) do
           loaded_events[event][subevent] = loaded_events[event][subevent] or {};
           loaded_events[event][subevent][id] = loaded_events[event][subevent][id] or {}
@@ -1877,7 +1907,7 @@ function GenericTrigger.Add(data, region)
               end
               if isCLEU then
                 if hasParam then
-                  tinsert(trigger_events, "COMBAT_LOG_EVENT_UNFILTERED")
+                  tinsert(trigger_events, CLEU_EVENT)
                   -- We don't register CLEU events without parameters anymore
                 end
               elseif isUnitEvent then
@@ -2235,7 +2265,7 @@ do
   function WeakAuras.InitSwingTimer()
     if not(swingTimerFrame) then
       swingTimerFrame = CreateFrame("Frame");
-      swingTimerFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+      swingTimerFrame:RegisterEvent(CLEU_EVENT);
       swingTimerFrame:RegisterEvent("PLAYER_ENTER_COMBAT");
       swingTimerFrame:RegisterEvent("PLAYER_LEAVE_COMBAT");
       swingTimerFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED");
@@ -2248,7 +2278,7 @@ do
       end
       swingTimerFrame:SetScript("OnEvent",
         function(_, event, ...)
-          if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+          if event == CLEU_EVENT then
             swingTimerCLEUCheck(CombatLogGetCurrentEventInfo())
           else
             swingTimerCheck(event, ...)

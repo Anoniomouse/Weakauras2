@@ -4548,7 +4548,7 @@ Private.event_prototypes = {
   ["Combat Log"] = {
     type = "combatlog",
     events = {
-      ["events"] = {"COMBAT_LOG_EVENT_UNFILTERED"}
+      ["events"] = {WeakAuras.CLEU_EVENT}
     },
     init = function(trigger)
       local ret = [[
