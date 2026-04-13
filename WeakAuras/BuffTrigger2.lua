@@ -49,6 +49,10 @@ local AddonName = ...
 ---@class Private
 local Private = select(2, ...)
 
+-- Hoist these before FixDebuffClass which uses them at definition time
+local string_lower = string.lower
+local GetTime = GetTime
+
 local FixDebuffClass
 if WeakAuras.IsRetail() then
   local LibDispell = LibStub("LibDispel-1.0")
@@ -108,8 +112,6 @@ end
 -- Lua APIs
 local tinsert, wipe = table.insert, wipe
 local pairs, next, type = pairs, next, type
-local string_lower = string.lower
-local GetTime = GetTime
 local UnitAura = UnitAura
 
 local newAPI = WeakAuras.IsRetail()
