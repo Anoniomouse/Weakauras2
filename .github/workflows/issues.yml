@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: "Automatically close issues that don't follow the issue template"
-        uses: damccorm/tag-ur-it@master
+        uses: damccorm/tag-ur-it@v1
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           configuration-path: "./.github/issue-rules.yml"

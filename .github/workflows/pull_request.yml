@@ -22,7 +22,7 @@ jobs:
     outputs:
       artifact-id: ${{ steps.upload-artifact.outputs.artifact-id}}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
@@ -47,7 +47,7 @@ jobs:
         with:
           args: -d
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         if: ${{ needs.permission_check.outputs.require-result == 'true' && contains(github.event.pull_request.labels.*.name, '🆕 Feature Preview')}}
         id: upload-artifact
         with:
@@ -77,9 +77,3 @@ jobs:
               "run_id": "${{ github.run_id }}"
             }
 
-      - name: Send Status to Discord
-        uses: nebularg/actions-discord-webhook@v1
-        with:
-          webhook_url: ${{ secrets.WEBHOOK_URL }}
-          status: ${{ job.status }}
-        if: failure()

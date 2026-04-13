@@ -5,6 +5,10 @@ local AddonName = ...
 local Private = select(2, ...)
 local L = WeakAuras.L
 
+-- Lua APIs
+local math_floor = math.floor
+local GetTime = GetTime
+
 -- Animations
 local animations = {}
 local pending_controls = {}
@@ -43,7 +47,7 @@ local function RunAnimation(key, anim, elapsed, time)
       end
       relativeProgress = region.inverse and (1 - relativeProgress) or relativeProgress
       anim.progress = anim.duration > 0 and  relativeProgress / anim.duration or 0
-      local iteration = math.floor(anim.progress)
+      local iteration = math_floor(anim.progress)
       --anim.progress = anim.progress - iteration
       if not(anim.iteration) then
         anim.iteration = iteration
@@ -57,37 +61,38 @@ local function RunAnimation(key, anim, elapsed, time)
   end
   local progress = anim.inverse and (1 - anim.progress) or anim.progress
   progress = anim.easeFunc(progress, anim.easeStrength or 3)
+  local isOptionsOpen = WeakAuras.IsOptionsOpen()
   Private.ActivateAuraEnvironmentForRegion(anim.region)
-  if(anim.translateFunc) then
-    local errorHandler = WeakAuras.IsOptionsOpen() and noopErrorHandler or Private.GetErrorHandlerUid(anim.auraUID, L["Slide Animation"])
-    if (anim.region.SetOffsetAnim) then
+  if anim.translateFunc then
+    local errorHandler = isOptionsOpen and noopErrorHandler or Private.GetErrorHandlerUid(anim.auraUID, L["Slide Animation"])
+    if anim.region.SetOffsetAnim then
       local ok, x, y = xpcall(anim.translateFunc, errorHandler, progress, 0, 0, anim.dX, anim.dY)
       anim.region:SetOffsetAnim(x, y)
     else
       anim.region:ClearAllPoints()
       local ok, x, y = xpcall(anim.translateFunc, errorHandler, progress, anim.startX, anim.startY, anim.dX, anim.dY)
-      if (ok) then
+      if ok then
         anim.region:SetPoint(anim.selfPoint, anim.anchor, anim.anchorPoint, x, y)
       end
     end
   end
-  if(anim.alphaFunc) then
-    local errorHandler = WeakAuras.IsOptionsOpen() and noopErrorHandler or Private.GetErrorHandlerUid(anim.auraUID, L["Fade Animation"])
+  if anim.alphaFunc then
+    local errorHandler = isOptionsOpen and noopErrorHandler or Private.GetErrorHandlerUid(anim.auraUID, L["Fade Animation"])
     local ok, alpha = xpcall(anim.alphaFunc, errorHandler, progress, anim.startAlpha, anim.dAlpha)
-    if (ok) then
-      if (anim.region.SetAnimAlpha) then
+    if ok then
+      if anim.region.SetAnimAlpha then
         anim.region:SetAnimAlpha(alpha)
       else
         anim.region:SetAlpha(alpha)
       end
     end
   end
-  if(anim.scaleFunc) then
-    local errorHandler = WeakAuras.IsOptionsOpen() and noopErrorHandler
-                                                   or Private.GetErrorHandlerUid(anim.auraUID, L["Zoom Animation"])
+  if anim.scaleFunc then
+    local errorHandler = isOptionsOpen and noopErrorHandler
+                                       or Private.GetErrorHandlerUid(anim.auraUID, L["Zoom Animation"])
     local ok, scaleX, scaleY = xpcall(anim.scaleFunc, errorHandler, progress, 1, 1, anim.scaleX, anim.scaleY)
-    if (ok) then
-      if(anim.region.Scale) then
+    if ok then
+      if anim.region.Scale then
         anim.region:Scale(scaleX, scaleY)
       else
         anim.region:SetWidth(anim.startWidth * scaleX)
@@ -95,17 +100,17 @@ local function RunAnimation(key, anim, elapsed, time)
       end
     end
   end
-  if(anim.rotateFunc and anim.region.SetAnimRotation) then
-    local errorHandler = WeakAuras.IsOptionsOpen() and noopErrorHandler
-                                                   or Private.GetErrorHandlerUid(anim.auraUID, L["Rotate Animation"])
+  if anim.rotateFunc and anim.region.SetAnimRotation then
+    local errorHandler = isOptionsOpen and noopErrorHandler
+                                      or Private.GetErrorHandlerUid(anim.auraUID, L["Rotate Animation"])
     local ok, rotate = xpcall(anim.rotateFunc, errorHandler, progress, anim.region:GetBaseRotation(), anim.rotate)
-    if (ok) then
+    if ok then
       anim.region:SetAnimRotation(rotate)
     end
   end
-  if(anim.colorFunc and anim.region.ColorAnim) then
-    local errorHandler = WeakAuras.IsOptionsOpen() and noopErrorHandler
-                                                   or Private.GetErrorHandlerUid(anim.auraUID, L["Color Animation"])
+  if anim.colorFunc and anim.region.ColorAnim then
+    local errorHandler = isOptionsOpen and noopErrorHandler
+                                      or Private.GetErrorHandlerUid(anim.auraUID, L["Color Animation"])
     local startR, startG, startB, startA = anim.region:GetColor()
     startR, startG, startB, startA = startR or 1, startG or 1, startB or 1, startA or 1
     local ok, r, g, b, a = xpcall(anim.colorFunc, errorHandler, progress, startR, startG, startB, startA,
@@ -116,7 +121,7 @@ local function RunAnimation(key, anim, elapsed, time)
     end
   end
   Private.ActivateAuraEnvironment(nil)
-  if(finished) then
+  if finished then
     if not(anim.loop) then
       if (anim.region.SetOffsetAnim) then
         anim.region:SetOffsetAnim(0, 0)

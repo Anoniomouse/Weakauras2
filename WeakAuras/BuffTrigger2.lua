@@ -66,7 +66,7 @@ if WeakAuras.IsRetail() then
     elseif debuffClass == "" then
       debuffClass = "enrage"
     else
-      debuffClass = string.lower(debuffClass)
+      debuffClass = string_lower(debuffClass)
     end
     return debuffClass
   end
@@ -77,7 +77,7 @@ else
     elseif debuffClass == "" then
       debuffClass = "enrage"
     else
-      debuffClass = string.lower(debuffClass)
+      debuffClass = string_lower(debuffClass)
     end
     return debuffClass
   end
@@ -108,6 +108,8 @@ end
 -- Lua APIs
 local tinsert, wipe = table.insert, wipe
 local pairs, next, type = pairs, next, type
+local string_lower = string.lower
+local GetTime = GetTime
 local UnitAura = UnitAura
 
 local newAPI = WeakAuras.IsRetail()

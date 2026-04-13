@@ -59,6 +59,7 @@ local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo or (C_CombatLo
 local CLEU_EVENT = WeakAuras.CLEU_EVENT;
 
 -- WoW APIs
+local GetTime = GetTime
 local IsPlayerMoving = IsPlayerMoving
 
 ---@class WeakAuras
@@ -922,10 +923,11 @@ end
 ---@param ... any
 function Private.ScanEvents(event, arg1, arg2, ...)
   local system = getGameEventFromComposedEvent(event)
-  Private.StartProfileSystem("generictrigger " .. system)
+  local profileKey = "generictrigger " .. system
+  Private.StartProfileSystem(profileKey)
   local event_list = loaded_events[event];
   if (not event_list) then
-    Private.StopProfileSystem("generictrigger " .. system)
+    Private.StopProfileSystem(profileKey)
     return
   end
   if(event == CLEU_EVENT) then
@@ -933,14 +935,14 @@ function Private.ScanEvents(event, arg1, arg2, ...)
 
     event_list = event_list[arg2];
     if (not event_list) then
-      Private.StopProfileSystem("generictrigger " .. system)
+      Private.StopProfileSystem(profileKey)
       return;
     end
     Private.ScanEventsInternal(event_list, event, CombatLogGetCurrentEventInfo());
   else
     Private.ScanEventsInternal(event_list, event, arg1, arg2, ...);
   end
-  Private.StopProfileSystem("generictrigger " .. system)
+  Private.StopProfileSystem(profileKey)
 end
 
 function WeakAuras.ScanEvents(event, arg1, arg2, ...)
@@ -954,7 +956,8 @@ end
 ---@param unit UnitToken
 ---@param ... any
 function Private.ScanUnitEvents(event, unit, ...)
-  Private.StartProfileSystem("generictrigger " .. event .. " " .. unit)
+  local profileKey = "generictrigger " .. event .. " " .. unit
+  Private.StartProfileSystem(profileKey)
   local unit_list = loaded_unit_events[unit]
   local inRaid = IsInRaid()
   if unit_list then
@@ -990,7 +993,7 @@ function Private.ScanUnitEvents(event, unit, ...)
       end
     end
   end
-  Private.StopProfileSystem("generictrigger " .. event .. " " .. unit)
+  Private.StopProfileSystem(profileKey)
 end
 
 function WeakAuras.ScanUnitEvents(event, unit, ...)
@@ -1249,7 +1252,8 @@ function GenericTrigger.ScanWithFakeEvent(id, fake)
 end
 
 function HandleEvent(frame, event, arg1, arg2, ...)
-  Private.StartProfileSystem("generictrigger " .. event);
+  local profileKey = "generictrigger " .. event
+  Private.StartProfileSystem(profileKey);
   if event == "NAME_PLATE_UNIT_ADDED" then
     nameplateExists[arg1] = true
   elseif event == "NAME_PLATE_UNIT_REMOVED" then
@@ -1282,7 +1286,7 @@ function HandleEvent(frame, event, arg1, arg2, ...)
     end,
     4);  -- Data not available
   end
-  Private.StopProfileSystem("generictrigger " .. event);
+  Private.StopProfileSystem(profileKey);
 end
 
 -- WORKAROUND https://github.com/Stanzilla/WoWUIBugs/issues/708
@@ -1296,7 +1300,8 @@ local brokenUnitMap = {
 }
 
 function HandleUnitEvent(frame, event, unit, ...)
-  Private.StartProfileSystem("generictrigger " .. event .. " " .. unit);
+  local profileKey = "generictrigger " .. event .. " " .. unit
+  Private.StartProfileSystem(profileKey);
   if not(WeakAuras.IsPaused()) then
     if UnitIsUnit(unit, frame.unit)
        or (brokenUnitMap[unit] == frame.unit and not UnitExists(unit))
@@ -1304,7 +1309,7 @@ function HandleUnitEvent(frame, event, unit, ...)
       Private.ScanUnitEvents(event, frame.unit, ...);
     end
   end
-  Private.StopProfileSystem("generictrigger " .. event .. " " .. unit);
+  Private.StopProfileSystem(profileKey);
 end
 
 function GenericTrigger.UnloadAll()
