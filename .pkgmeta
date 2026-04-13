@@ -3,19 +3,19 @@ package-as: WeakAuras
 externals:
   WeakAuras/Libs/LibStub:
     url: https://github.com/WoWUIDev/Ace3.git
-    subdirectory: LibStub
+    path: LibStub
   WeakAuras/Libs/CallbackHandler-1.0:
     url: https://github.com/WoWUIDev/Ace3.git
-    subdirectory: CallbackHandler-1.0
+    path: CallbackHandler-1.0
   WeakAuras/Libs/AceTimer-3.0:
     url: https://github.com/WoWUIDev/Ace3.git
-    subdirectory: AceTimer-3.0
+    path: AceTimer-3.0
   WeakAuras/Libs/AceSerializer-3.0:
     url: https://github.com/WoWUIDev/Ace3.git
-    subdirectory: AceSerializer-3.0
+    path: AceSerializer-3.0
   WeakAuras/Libs/AceComm-3.0:
     url: https://github.com/WoWUIDev/Ace3.git
-    subdirectory: AceComm-3.0
+    path: AceComm-3.0
   WeakAuras/Libs/Chomp: https://github.com/wow-rp-addons/Chomp.git
   WeakAuras/Libs/LibSharedMedia-3.0: https://github.com/wowace-clone/LibSharedMedia-3.0.git
   WeakAuras/Libs/LibDataBroker-1.1: https://github.com/tekkub/libdatabroker-1-1
@@ -26,7 +26,7 @@ externals:
   WeakAuras/Libs/LibCustomGlow-1.0: https://github.com/Stanzilla/LibCustomGlow
   WeakAuras/Libs/LibDBIcon-1.0:
     url: https://github.com/wowace-clone/LibDBIcon-1.0.git
-    subdirectory: LibDBIcon-1.0
+    path: LibDBIcon-1.0
   WeakAuras/Libs/LibGetFrame-1.0: https://github.com/mrbuds/LibGetFrame
   WeakAuras/Libs/Archivist:
     url: https://github.com/emptyrivers/Archivist
@@ -44,16 +44,16 @@ externals:
     commit: main
   WeakAurasOptions/Libs/AceConfig-3.0:
     url: https://github.com/WoWUIDev/Ace3.git
-    subdirectory: AceConfig-3.0
+    path: AceConfig-3.0
   WeakAurasOptions/Libs/AceGUI-3.0:
     url: https://github.com/WoWUIDev/Ace3.git
-    subdirectory: AceGUI-3.0
+    path: AceGUI-3.0
   WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets:
     url: https://github.com/wowace-clone/AceGUI-3.0-SharedMediaWidgets.git
-    subdirectory: AceGUI-3.0-SharedMediaWidgets
+    path: AceGUI-3.0-SharedMediaWidgets
   WeakAurasOptions/Libs/LibUIDropDownMenu:
     url: https://github.com/wowace-clone/LibUIDropDownMenu.git
-    subdirectory: LibUIDropDownMenu
+    path: LibUIDropDownMenu
   WeakAurasOptions/Libs/LibAPIAutoComplete-1.0: https://github.com/WeakAuras/LibAPIAutoComplete-1.0/
 
 enable-nolib-creation: no
