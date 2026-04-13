@@ -6,6 +6,7 @@ exclude_files = {
 	"WeakAuras_Options.lua",
 	"WeakAuras_Templates.lua",
 	"WeakAuras/Libs/",
+	"tests/",
 	".luacheckrc"
 }
 ignore = {
@@ -294,6 +295,8 @@ globals = {
 	"BuyTrainerService",
 	"BuybackItem",
 	"C_ActionBar",
+	"C_CombatLog",
+	"C_CombatLogInternal",
 	"C_AddOns.DisableAddOn",
 	"C_AddOns.EnableAddOn",
 	"C_AddOns.GetAddOnEnableState",
