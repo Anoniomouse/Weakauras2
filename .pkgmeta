@@ -34,8 +34,7 @@ externals:
   WeakAuras/Libs/LibSerialize:
     url: https://github.com/rossnichols/LibSerialize
     tag: v1.0.0
-  WeakAuras/Libs/LibSpecialization:
-    url: https://github.com/BigWigsMods/LibSpecialization.git/LibSpecialization
+  WeakAuras/Libs/LibSpecialization: https://github.com/BigWigsMods/LibSpecialization.git
   WeakAuras/Libs/TaintLess:
     url: https://www.townlong-yak.com/addons.git/taintless
     commit: default
