@@ -3,6 +3,8 @@ WeakAuras_Main.lua
 WeakAuras_Options.lua
 WeakAuras_Templates.lua
 WeakAuras/Libs/*
+!WeakAuras/Libs/LibCompress/
+!WeakAuras/Libs/LibCompress/**
 WeakAurasOptions/Libs/*
 *.bat
 **/desktop.ini
