@@ -32,6 +32,7 @@ ignore = {
 globals = {
 	"_G",
 	"bit",
+	"bit32",
 	"Constants",
 	"OKAY",
 
