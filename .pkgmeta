@@ -52,9 +52,7 @@ externals:
   WeakAurasOptions/Libs/AceGUI-3.0-SharedMediaWidgets:
     url: https://github.com/wowace-clone/AceGUI-3.0-SharedMediaWidgets.git
     path: AceGUI-3.0-SharedMediaWidgets
-  WeakAurasOptions/Libs/LibUIDropDownMenu:
-    url: https://github.com/wowace-clone/LibUIDropDownMenu.git
-    path: LibUIDropDownMenu
+  # LibUIDropDownMenu is vendored directly in the repo (git mirror has unexpanded SVN keywords)
   WeakAurasOptions/Libs/LibAPIAutoComplete-1.0: https://github.com/WeakAuras/LibAPIAutoComplete-1.0/
 
 enable-nolib-creation: no

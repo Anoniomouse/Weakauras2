@@ -6,6 +6,8 @@ WeakAuras/Libs/*
 !WeakAuras/Libs/LibCompress/
 !WeakAuras/Libs/LibCompress/**
 WeakAurasOptions/Libs/*
+!WeakAurasOptions/Libs/LibUIDropDownMenu/
+!WeakAurasOptions/Libs/LibUIDropDownMenu/**
 *.bat
 **/desktop.ini
 .DS_Store
