@@ -43,6 +43,7 @@ jobs:
           -e "s/--@end-experimental@/--@end-experimental@\]=====\]/" WeakAuras/Init.lua
 
       - name: Create Package
+        if: startsWith(github.ref, 'refs/tags/')
         uses: BigWigsMods/packager@v2
         with:
           args: -g retail
