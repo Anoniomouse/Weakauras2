@@ -6,6 +6,7 @@ exclude_files = {
 	"WeakAuras_Options.lua",
 	"WeakAuras_Templates.lua",
 	"WeakAuras/Libs/",
+	"WeakAurasOptions/Libs/",
 	"tests/",
 	".luacheckrc"
 }
