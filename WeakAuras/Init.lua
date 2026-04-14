@@ -385,16 +385,6 @@ local versionStringFromToc = C_AddOns.GetAddOnMetadata("WeakAuras", "Version")
 local versionString = "@project-version@"
 local buildTime = "@build-time@"
 
-local flavorFromToc = C_AddOns.GetAddOnMetadata("WeakAuras", "X-Flavor")
-local flavorFromTocToNumber = {
-  Vanilla = 1,
-  TBC = 2,
-  Wrath = 3,
-  Cata = 4,
-  Mists = 5,
-  Mainline = 10
-}
-local flavor = flavorFromTocToNumber[flavorFromToc]
 
 if not versionString:find("beta", 1, true) then
   WeakAuras.buildType = "release"
@@ -424,35 +414,18 @@ WeakAuras.newFeatureString = "|TInterface\\OptionsFrame\\UI-OptionsFrame-NewFeat
 WeakAuras.BuildInfo = select(4, GetBuildInfo())
 
 ---@return boolean result
-function WeakAuras.IsClassicEra()
-  return flavor == 1
-end
--- save compatibility with old auras
+function WeakAuras.IsClassicEra() return false end
 WeakAuras.IsClassic = WeakAuras.IsClassicEra
-
-function WeakAuras.IsTBC()
-  return flavor == 2
-end
-
 ---@return boolean result
-function WeakAuras.IsWrathClassic()
-  return flavor == 3
-end
-
+function WeakAuras.IsTBC() return false end
 ---@return boolean result
-function WeakAuras.IsCataClassic()
-  return flavor == 4
-end
-
+function WeakAuras.IsWrathClassic() return false end
 ---@return boolean result
-function WeakAuras.IsMists()
-  return flavor == 5
-end
-
+function WeakAuras.IsCataClassic() return false end
 ---@return boolean result
-function WeakAuras.IsRetail()
-  return flavor == 10
-end
+function WeakAuras.IsMists() return false end
+---@return boolean result
+function WeakAuras.IsRetail() return true end
 
 ---@return boolean result
 function WeakAuras.IsTWW()
@@ -464,110 +437,51 @@ function WeakAuras.IsMidnight()
   return WeakAuras.BuildInfo >= 120000
 end
 
+-- Classic-only combinations: always false on retail-only build
 ---@return boolean result
-function WeakAuras.IsClassicOrTBC()
-  return WeakAuras.IsClassicEra() or WeakAuras.IsTBC()
-end
+function WeakAuras.IsClassicOrTBC() return false end
+---@return boolean result
+function WeakAuras.IsClassicOrWrath() return false end
+---@return boolean result
+function WeakAuras.IsClassicOrTBCOrWrath() return false end
+---@return boolean result
+function WeakAuras.IsTBCOrWrath() return false end
+---@return boolean result
+function WeakAuras.IsClassicOrCata() return false end
+---@return boolean result
+function WeakAuras.IsClassicOrTBCOrWrathOrCata() return false end
+---@return boolean result
+function WeakAuras.IsClassicOrTBCOrWrathOrCataOrMists() return false end
+---@return boolean result
+function WeakAuras.IsTBCOrWrathOrCata() return false end
+---@return boolean result
+function WeakAuras.IsWrathOrCata() return false end
+---@return boolean result
+function WeakAuras.IsWrathOrCataOrMists() return false end
+---@return boolean result
+function WeakAuras.IsTBCOrWrathOrCataOrMists() return false end
+---@return boolean result
+function WeakAuras.IsWrathOrMists() return false end
+---@return boolean result
+function WeakAuras.IsTBCOrWrathOrMists() return false end
+---@return boolean result
+function WeakAuras.IsCataOrMists() return false end
 
+-- Combinations that include retail: always true
 ---@return boolean result
-function WeakAuras.IsClassicOrWrath()
-  return WeakAuras.IsClassicEra() or WeakAuras.IsWrathClassic()
-end
-
+function WeakAuras.IsWrathOrCataOrMistsOrRetail() return true end
 ---@return boolean result
-function WeakAuras.IsClassicOrTBCOrWrath()
-  return WeakAuras.IsClassicEra() or WeakAuras.IsTBC() or WeakAuras.IsWrathClassic()
-end
-
+function WeakAuras.IsMistsOrRetail() return true end
 ---@return boolean result
-function WeakAuras.IsTBCOrWrath()
-  return WeakAuras.IsTBC() or WeakAuras.IsWrathClassic()
-end
-
+function WeakAuras.IsWrathOrMistsOrRetail() return true end
 ---@return boolean result
-function WeakAuras.IsClassicOrCata()
-  return WeakAuras.IsClassicEra() or WeakAuras.IsCataClassic()
-end
-
+function WeakAuras.IsTBCOrWrathOrMistsOrRetail() return true end
 ---@return boolean result
-function WeakAuras.IsClassicOrTBCOrWrathOrCata()
-  return WeakAuras.IsClassicEra() or WeakAuras.IsTBC() or WeakAuras.IsWrathClassic() or WeakAuras.IsCataClassic()
-end
-
+function WeakAuras.IsCataOrMistsOrRetail() return true end
 ---@return boolean result
-function WeakAuras.IsClassicOrTBCOrWrathOrCataOrMists()
-  return WeakAuras.IsClassicEra() or WeakAuras.IsTBC() or WeakAuras.IsWrathClassic() or WeakAuras.IsCataClassic() or WeakAuras.IsMists()
-end
-
+function WeakAuras.IsTBCOrWrathOrCataOrMistsOrRetail() return true end
 ---@return boolean result
-function WeakAuras.IsTBCOrWrathOrCata()
-  return WeakAuras.IsTBC() or WeakAuras.IsWrathClassic() or WeakAuras.IsCataClassic()
-end
-
----@return boolean result
-function WeakAuras.IsWrathOrCata()
-  return WeakAuras.IsWrathClassic() or WeakAuras.IsCataClassic()
-end
-
----@return boolean result
-function WeakAuras.IsWrathOrCataOrMists()
-  return WeakAuras.IsWrathClassic() or WeakAuras.IsCataClassic() or WeakAuras.IsMists()
-end
-
----@return boolean result
-function WeakAuras.IsWrathOrCataOrMistsOrRetail()
-  return WeakAuras.IsWrathClassic() or WeakAuras.IsCataClassic() or WeakAuras.IsMists() or WeakAuras.IsRetail()
-end
-
----@return boolean result
-function WeakAuras.IsTBCOrWrathOrCataOrMists()
-  return WeakAuras.IsTBC() or WeakAuras.IsWrathClassic() or WeakAuras.IsCataClassic() or WeakAuras.IsMists()
-end
-
----@return boolean result
-function WeakAuras.IsWrathOrMists()
-  return WeakAuras.IsWrathClassic() or WeakAuras.IsMists()
-end
-
----@return boolean result
-function WeakAuras.IsTBCOrWrathOrMists()
-  return WeakAuras.IsTBC() or WeakAuras.IsWrathClassic() or WeakAuras.IsMists()
-end
-
----@return boolean result
-function WeakAuras.IsMistsOrRetail()
-  return WeakAuras.IsMists() or WeakAuras.IsRetail()
-end
-
----@return boolean result
-function WeakAuras.IsWrathOrMistsOrRetail()
-  return WeakAuras.IsWrathClassic() or WeakAuras.IsMists() or WeakAuras.IsRetail()
-end
-
----@return boolean result
-function WeakAuras.IsTBCOrWrathOrMistsOrRetail()
-  return WeakAuras.IsTBC() or WeakAuras.IsWrathClassic() or WeakAuras.IsMists() or WeakAuras.IsRetail()
-end
-
----@return boolean result
-function WeakAuras.IsCataOrMists()
-  return WeakAuras.IsCataClassic() or WeakAuras.IsMists()
-end
-
----@return boolean result
-function WeakAuras.IsCataOrMistsOrRetail()
-  return WeakAuras.IsCataClassic() or WeakAuras.IsMists() or WeakAuras.IsRetail()
-end
-
----@return boolean result
-function WeakAuras.IsTBCOrWrathOrCataOrMistsOrRetail()
-  return WeakAuras.IsTBC() or WeakAuras.IsWrathClassic() or WeakAuras.IsCataClassic() or WeakAuras.IsMists() or WeakAuras.IsRetail()
-end
-
----@return boolean result
-function WeakAuras.IsWrathOrRetail()
-  return WeakAuras.IsWrathClassic() or WeakAuras.IsRetail()
-end
+function WeakAuras.IsWrathOrRetail() return true end
 
 ---@param ... string
 WeakAuras.prettyPrint = function(...)
@@ -604,39 +518,37 @@ do
     "LibGetFrame-1.0",
     "LibSerialize",
   }
-  if WeakAuras.IsRetail() then
-    tinsert(LibStubLibs, "LibSpecialization")
-    AddonCompartmentFrame:RegisterAddon({
-      text = AddonName,
-      icon = "Interface\\AddOns\\WeakAuras\\Media\\Textures\\icon.blp",
-      registerForAnyClick = true,
-      notCheckable = true,
-      func = function(button, menuInputData, menu)
-        local mouseButton = menuInputData.buttonName
-        if mouseButton == "LeftButton" then
-          if IsShiftKeyDown() then
-            if not (WeakAuras.IsOptionsOpen()) then
-              WeakAuras.Toggle()
-            end
-          else
-            WeakAuras.OpenOptions()
+  tinsert(LibStubLibs, "LibSpecialization")
+  AddonCompartmentFrame:RegisterAddon({
+    text = AddonName,
+    icon = "Interface\\AddOns\\WeakAuras\\Media\\Textures\\icon.blp",
+    registerForAnyClick = true,
+    notCheckable = true,
+    func = function(button, menuInputData, menu)
+      local mouseButton = menuInputData.buttonName
+      if mouseButton == "LeftButton" then
+        if IsShiftKeyDown() then
+          if not (WeakAuras.IsOptionsOpen()) then
+            WeakAuras.Toggle()
           end
-        elseif mouseButton == "MiddleButton" then
-          WeakAuras.ToggleMinimap()
         else
-          WeakAurasProfilingFrame:Toggle()
+          WeakAuras.OpenOptions()
         end
-      end,
-      funcOnEnter = function(button)
-        MenuUtil.ShowTooltip(button, function(tooltip)
-          WeakAuras.GenerateTooltip(true, tooltip)
-        end)
-      end,
-      funcOnLeave = function(button)
-        MenuUtil.HideTooltip(button)
-      end,
-    })
-  end
+      elseif mouseButton == "MiddleButton" then
+        WeakAuras.ToggleMinimap()
+      else
+        WeakAurasProfilingFrame:Toggle()
+      end
+    end,
+    funcOnEnter = function(button)
+      MenuUtil.ShowTooltip(button, function(tooltip)
+        WeakAuras.GenerateTooltip(true, tooltip)
+      end)
+    end,
+    funcOnLeave = function(button)
+      MenuUtil.HideTooltip(button)
+    end,
+  })
   for _, lib in ipairs(StandAloneLibs) do
     if not lib then
         libsAreOk = false
@@ -665,11 +577,6 @@ if not libsAreOk then
   end)
 end
 
-if WeakAuras.IsWrathClassic() then
-  C_Timer.After(1, function()
-    WeakAuras.prettyPrint("This version of WeakAuras is provided as is. We are unable to test it ourselves on CN Servers.")
-  end)
-end
 
 -- These function stubs are defined here to reduce the number of errors that occur if WeakAuras.lua fails to compile
 --- @type fun(regionType: string, createFunction: function, modifyFunction: function, defaults: table, properties: table|function|nil, validate: function?))
