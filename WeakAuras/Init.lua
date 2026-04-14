@@ -555,6 +555,7 @@ do
         WeakAuras.prettyPrint("Missing library:", lib)
     end
   end
+  WeakAuras.prettyPrint("Debug: LibStub =", tostring(LibStub))
   if LibStub then
     for _, lib in ipairs(LibStubLibs) do
         if not LibStub:GetLibrary(lib, true) then
