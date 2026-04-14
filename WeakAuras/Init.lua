@@ -555,18 +555,23 @@ do
         WeakAuras.prettyPrint("Missing library:", lib)
     end
   end
-  WeakAuras.prettyPrint("Debug: LibStub =", tostring(LibStub))
+  local diagMessages = {"Debug: LibStub = " .. tostring(LibStub)}
   if LibStub then
     for _, lib in ipairs(LibStubLibs) do
         if not LibStub:GetLibrary(lib, true) then
           libsAreOk = false
-          WeakAuras.prettyPrint("Missing library:", lib)
+          tinsert(diagMessages, "Missing library: " .. lib)
         end
     end
   else
     libsAreOk = false
-    WeakAuras.prettyPrint("LibStub failed to load - please reinstall.")
+    tinsert(diagMessages, "LibStub failed to load!")
   end
+  C_Timer.After(2, function()
+    for _, msg in ipairs(diagMessages) do
+      WeakAuras.prettyPrint(msg)
+    end
+  end)
 end
 
 function WeakAuras.IsLibsOK()
