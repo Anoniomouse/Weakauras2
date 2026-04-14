@@ -1,3 +1,12 @@
+-- Define mixin tables and XML-referenced globals before the IsLibsOK guard so
+-- Profiling.xml never warns about missing mixins or functions regardless of lib state.
+WeakAurasProfilingMixin = {}
+WeakAurasProfilingReportMixin = {}
+WeakAurasProfilingLineMixin = {}
+function WeakAurasProfilingResultButton_OnClick() end
+function WeakAurasProfilingStopButton_OnClick() end
+function WeakAurasProfilingColumnDisplay_OnClick() end
+
 if not WeakAuras.IsLibsOK() then
   return
 end
