@@ -65,9 +65,15 @@ manual-changelog:
 ignore:
   - README.md
   - CONTRIBUTING.md
+  - CODE_OF_CONDUCT.md
   - babelfish.lua
   - update_translations.sh
   - generate_changelog.sh
+  - cspell.json
+  - stylua.toml
+  - exclude_libs.txt
+  - fetch_libs.ps1
+  - tests
   - WeakAuras/Libs/LibDeflate/docs
   - WeakAuras/Libs/LibDeflate/examples
   - WeakAuras/Libs/LibDeflate/*.md
