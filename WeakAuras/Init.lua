@@ -564,6 +564,7 @@ do
     end
   else
     libsAreOk = false
+    WeakAuras.prettyPrint("LibStub failed to load - please reinstall.")
   end
 end
 

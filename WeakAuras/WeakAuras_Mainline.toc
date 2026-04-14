@@ -1,5 +1,5 @@
 ## Interface: 120001
-## Title: WeakAuras
+## Title: WeakAuras 2
 ## Author: The WeakAuras Team
 ## Version: @project-version@
 ## IconTexture: Interface\AddOns\WeakAuras\Media\Textures\icon.blp
