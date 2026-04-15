@@ -1535,8 +1535,8 @@ local function StoreBossGUIDs()
     for i = 1, 10 do
       if (UnitExists ("boss" .. i)) then
         local guid = UnitGUID ("boss" .. i)
-        if (type(guid) == "string") then
-          WeakAuras.CurrentEncounter.boss_guids [tostring(guid)] = true
+        if (guid) then
+          WeakAuras.CurrentEncounter.boss_guids [guid] = true
         end
       end
     end
@@ -1564,7 +1564,7 @@ local function CreateEncounterTable(encounter_id)
     zone_id = instanceId,
     boss_guids = {},
   }
-  timer:ScheduleTimer(StoreBossGUIDs, 2)
+  C_Timer.After(2, StoreBossGUIDs)
 
   return WeakAuras.CurrentEncounter
 end
