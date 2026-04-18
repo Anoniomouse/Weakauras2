@@ -3849,13 +3849,17 @@ function WeakAuras.WatchUnitChange(unit)
             end
           end
         end
-        if watchUnitChange.GUIDToUnitIds[newGUID] then
-          for unitB in pairs(watchUnitChange.GUIDToUnitIds[newGUID]) do
+        -- newGUID may be tainted when triggered by a protected action (e.g. TargetNearestEnemy)
+        local newGUIDOk, newGUIDEntry = pcall(function() return watchUnitChange.GUIDToUnitIds[newGUID] end)
+        if newGUIDOk and newGUIDEntry then
+          for unitB in pairs(newGUIDEntry) do
             if unitA ~= unitB then
               eventsToSend["UNIT_IS_UNIT_CHANGED_" .. unitA .. "_" .. unitB] = unitA
               eventsToSend["UNIT_IS_UNIT_CHANGED_" .. unitB .. "_" .. unitA] = unitB
             end
           end
+        elseif not newGUIDOk then
+          newGUID = nil -- tainted; skip GUID tracking for this update
         end
       end
       -- update data
