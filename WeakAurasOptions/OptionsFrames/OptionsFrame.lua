@@ -511,20 +511,10 @@ function OptionsPrivate.CreateFrame()
   local thanksListCJ = lineWrapDiscordList(OptionsPrivate.Private.DiscordListCJ)
   local thanksListK = lineWrapDiscordList(OptionsPrivate.Private.DiscordListK)
 
-  local discordButton = addFooter(L["Discord"], [[Interface\AddOns\WeakAuras\Media\Textures\discord.tga]], "https://discord.gg/weakauras",
-            L["Chat with WeakAuras experts on our Discord server."])
-  discordButton:SetParent(tipFrame)
-  discordButton:SetPoint("LEFT", tipFrame, "LEFT")
-
-  local documentationButton = addFooter(L["Documentation"], [[Interface\AddOns\WeakAuras\Media\Textures\GitHub.tga]], "https://github.com/WeakAuras/WeakAuras2/wiki",
+  local documentationButton = addFooter(L["Documentation"], [[Interface\AddOns\WeakAuras\Media\Textures\GitHub.tga]], "https://github.com/Anoniomouse/Weakauras2",
             L["Check out our wiki for a large collection of examples and snippets."])
   documentationButton:SetParent(tipFrame)
-  documentationButton:SetPoint("LEFT", discordButton, "RIGHT", footerSpacing, 0)
-
-  local thanksButton = addFooter(L["Thanks"], [[Interface\AddOns\WeakAuras\Media\Textures\waheart.tga]],
-                                 "https://www.patreon.com/WeakAuras", thanksList, thanksListCJ, thanksListK, nil, 800)
-  thanksButton:SetParent(tipFrame)
-  thanksButton:SetPoint("LEFT", documentationButton, "RIGHT", footerSpacing, 0)
+  documentationButton:SetPoint("LEFT", tipFrame, "LEFT")
 
   if OptionsPrivate.changelog then
     local changelog
@@ -537,10 +527,10 @@ function OptionsPrivate.CreateFrame()
     local changelogButton = addFooter(L["Changelog"], "", OptionsPrivate.changelog.fullChangeLogUrl,
                                       changelog, nil, nil, false, 800)
     changelogButton:SetParent(tipFrame)
-    changelogButton:SetPoint("LEFT", thanksButton, "RIGHT", footerSpacing, 0)
+    changelogButton:SetPoint("LEFT", documentationButton, "RIGHT", footerSpacing, 0)
   end
 
-  local reportbugButton = addFooter(L["Found a Bug?"], [[Interface\AddOns\WeakAuras\Media\Textures\bug_report.tga]], "https://github.com/WeakAuras/WeakAuras2/issues/new?template=bug_report.yml",
+  local reportbugButton = addFooter(L["Found a Bug?"], [[Interface\AddOns\WeakAuras\Media\Textures\bug_report.tga]], "https://github.com/Anoniomouse/Weakauras2/issues/new",
             L["Report bugs on our issue tracker."], nil, nil, true)
   reportbugButton:SetParent(tipFrame)
   reportbugButton:SetPoint("RIGHT", tipFrame, "RIGHT")
