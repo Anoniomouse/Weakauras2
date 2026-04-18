@@ -3442,6 +3442,13 @@ do
     elseif enabled == true then
       enabled = 1
     end
+    startTime = startTime or 0;
+    duration = duration or 0;
+    -- WoW 12.x: GetItemCooldown may return "secret" tainted values; skip item CD tracking this cycle
+    do
+      local taintOk = pcall(function() return duration > 0 end)
+      if taintOk == nil then return end
+    end
     if (duration == 0) then
       enabled = 1;
     end
@@ -3451,8 +3458,6 @@ do
 
     local itemCdEnabledChanged = (itemCdEnabled[id] ~= enabled);
     itemCdEnabled[id] = enabled;
-    startTime = startTime or 0;
-    duration = duration or 0;
     local time = GetTime();
 
     -- We check against 1.5 and gcdDuration, as apparently the durations might not match exactly.
@@ -3513,6 +3518,11 @@ do
     itemSlotsEnable[id] = enable;
     startTime = startTime or 0;
     duration = duration or 0;
+    -- WoW 12.x: GetInventoryItemCooldown may return "secret" tainted values; skip this cycle
+    do
+      local taintOk = pcall(function() return duration > 0 end)
+      if taintOk == nil then return end
+    end
     local time = GetTime();
 
     -- We check against 1.5 and gcdDuration, as apparently the durations might not match exactly.
@@ -3690,6 +3700,13 @@ do
         -- TODO: In 10.2.6 the apis return values changed from 1,0 for enabled to true, false
         -- We should adjust once its on all versions
         local startTime, duration, enabled = C_Container.GetItemCooldown(id);
+        startTime = startTime or 0;
+        duration = duration or 0;
+        -- WoW 12.x: GetItemCooldown may return "secret" tainted values; skip initial CD setup this cycle
+        do
+          local taintOk = pcall(function() return duration > 0 end)
+          if taintOk == nil then return end
+        end
         if (duration == 0) then
           enabled = 1;
         end
@@ -3743,6 +3760,14 @@ do
             local slots = itemSlotsSpellIdToSlot[spellId] or {}
             tinsert(slots, id)
             itemSlotsSpellIdToSlot[spellId] = slots
+          end
+
+          duration = duration or 0;
+          startTime = startTime or 0;
+          -- WoW 12.x: GetInventoryItemCooldown may return "secret" tainted values; skip initial CD setup this cycle
+          do
+            local taintOk = pcall(function() return duration > 0 end)
+            if taintOk == nil then return end
           end
 
           if(duration > 0 and duration > 1.5 and duration ~= WeakAuras.gcdDuration()) then
