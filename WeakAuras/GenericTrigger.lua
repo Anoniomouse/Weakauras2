@@ -2353,6 +2353,12 @@ do
         modRate = spellCooldownInfo.modRate
       end
     end
+    -- WoW 12.x: GetSpellCooldown may return "secret" tainted values; skip GCD tracking this cycle
+    do
+      local taintOk = pcall(function() return duration and duration > 0 end)
+      if taintOk == nil then return end
+    end
+
     if(duration and duration > 0) then
       if not(gcdStart) then
         event = "GCD_START";
@@ -3338,6 +3344,19 @@ do
 
     modRate = modRate or 1.0;
     modRateCharges = modRateCharges or 1.0;
+
+    -- WoW 12.x: C_Spell.GetSpellCooldown may return "secret" tainted values after a protected action
+    -- (e.g. TargetNearestEnemy). Comparisons with secret values throw uncatchable errors — pcall
+    -- returns nil (not false) in that case. Detect this and replace with untainted fallbacks.
+    do
+      local taintOk = pcall(function() return durationCooldown > 0 end)
+      if taintOk == nil then
+        local baseDurationMs = GetSpellBaseCooldown and GetSpellBaseCooldown(id) or 0
+        durationCooldown = baseDurationMs / 1000
+        startTimeCooldown = durationCooldown > 0 and GetTime() or 0
+        modRate = 1.0
+      end
+    end
 
     -- WORKAROUND: Sometimes the API returns very high bogus numbers causing client freezes, discard them here. CurseForge issue #1008
     if (durationCooldown > 604800) then
