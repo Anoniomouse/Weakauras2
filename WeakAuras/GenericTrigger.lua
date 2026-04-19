@@ -3269,51 +3269,49 @@ do
       startTime = startTime or 0;
       duration = duration or 0;
       -- WoW 12.x: GetRuneCooldown may return a tainted secret number value; skip this rune this cycle
-      do
-        local taintOk = pcall(function() return duration > 0 end)
-        if not taintOk then goto continue end
-      end
-      runeDuration = duration > 0 and duration or runeDuration
-      local time = GetTime();
+      local taintOk = pcall(function() return duration > 0 end)
+      if taintOk then
+        runeDuration = duration > 0 and duration or runeDuration
+        local time = GetTime();
 
-      if(not startTime or startTime == 0) then
-        startTime = 0
-        duration = 0
-      end
-
-      if(duration > 0 and duration ~= WeakAuras.gcdDuration()) then
-        -- On non-GCD cooldown
-        local endTime = startTime + duration;
-
-        if not(runeCdExps[id]) then
-          -- New cooldown
-          runeCdDurs[id] = duration;
-          runeCdExps[id] = endTime;
-          runeCdHandles[id] = timer:ScheduleTimerFixed(RuneCooldownFinished, endTime - time, id);
-          Private.ScanEvents("RUNE_COOLDOWN_STARTED", id);
-        elseif(runeCdExps[id] ~= endTime) then
-          -- Cooldown is now different
-          if(runeCdHandles[id]) then
-            timer:CancelTimer(runeCdHandles[id]);
-          end
-          runeCdDurs[id] = duration;
-          runeCdExps[id] = endTime;
-          runeCdHandles[id] = timer:ScheduleTimerFixed(RuneCooldownFinished, endTime - time, id);
-          Private.ScanEvents("RUNE_COOLDOWN_CHANGED", id);
+        if(not startTime or startTime == 0) then
+          startTime = 0
+          duration = 0
         end
-      elseif(duration > 0) then
-      -- GCD, do nothing
-      else
-        if(runeCdExps[id]) then
-          -- Somehow CheckCooldownReady caught the rune cooldown before the timer callback
-          -- This shouldn't happen, but if it does, no problem
-          if(runeCdHandles[id]) then
-            timer:CancelTimer(runeCdHandles[id]);
+
+        if(duration > 0 and duration ~= WeakAuras.gcdDuration()) then
+          -- On non-GCD cooldown
+          local endTime = startTime + duration;
+
+          if not(runeCdExps[id]) then
+            -- New cooldown
+            runeCdDurs[id] = duration;
+            runeCdExps[id] = endTime;
+            runeCdHandles[id] = timer:ScheduleTimerFixed(RuneCooldownFinished, endTime - time, id);
+            Private.ScanEvents("RUNE_COOLDOWN_STARTED", id);
+          elseif(runeCdExps[id] ~= endTime) then
+            -- Cooldown is now different
+            if(runeCdHandles[id]) then
+              timer:CancelTimer(runeCdHandles[id]);
+            end
+            runeCdDurs[id] = duration;
+            runeCdExps[id] = endTime;
+            runeCdHandles[id] = timer:ScheduleTimerFixed(RuneCooldownFinished, endTime - time, id);
+            Private.ScanEvents("RUNE_COOLDOWN_CHANGED", id);
           end
-          RuneCooldownFinished(id);
+        elseif(duration > 0) then
+        -- GCD, do nothing
+        else
+          if(runeCdExps[id]) then
+            -- Somehow CheckCooldownReady caught the rune cooldown before the timer callback
+            -- This shouldn't happen, but if it does, no problem
+            if(runeCdHandles[id]) then
+              timer:CancelTimer(runeCdHandles[id]);
+            end
+            RuneCooldownFinished(id);
+          end
         end
       end
-      ::continue::
     end
     return runeDuration;
   end
