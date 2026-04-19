@@ -134,7 +134,9 @@ if WeakAuras.IsRetail() then
         castLatencyFrame:GetScript("OnEvent")(nil, event, unit, ...)
       end
     end
-    Private.ScanUnitEvents(event.."_FAKE", unit, ...)
+    if Private.ScanUnitEvents then
+      Private.ScanUnitEvents(event.."_FAKE", unit, ...)
+    end
   end)
 else
   WeakAuras.UnitChannelInfo = UnitChannelInfo
