@@ -3363,13 +3363,21 @@ do
 
     -- WoW 12.x: C_Spell.GetSpellCooldown may return "secret" tainted values after a protected action
     -- (e.g. TargetNearestEnemy). Comparisons throw a taint error caught by pcall (returns false).
-    -- Detect this and replace with untainted fallbacks.
+    -- Use C_Spell.GetSpellCooldownDuration():IsZero() as an untainted "is ready" oracle, then fall
+    -- back to GetSpellBaseCooldown for the duration value when the spell is actually on CD.
     do
       local taintOk = pcall(function() return durationCooldown > 0 end)
       if not taintOk then
-        local baseDurationMs = GetSpellBaseCooldown and GetSpellBaseCooldown(id) or 0
-        durationCooldown = baseDurationMs / 1000
-        startTimeCooldown = durationCooldown > 0 and GetTime() or 0
+        local cdDuration = C_Spell.GetSpellCooldownDuration and C_Spell.GetSpellCooldownDuration(id)
+        local isReady = cdDuration and cdDuration:IsZero()
+        if isReady then
+          durationCooldown = 0
+          startTimeCooldown = 0
+        else
+          local baseDurationMs = GetSpellBaseCooldown and GetSpellBaseCooldown(id) or 0
+          durationCooldown = baseDurationMs / 1000
+          startTimeCooldown = durationCooldown > 0 and GetTime() or 0
+        end
         modRate = 1.0
       end
     end
