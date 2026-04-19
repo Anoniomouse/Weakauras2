@@ -3414,6 +3414,11 @@ do
     end
 
     local count = GetSpellCount(id)
+    -- WoW 12.x: GetSpellCount may return a tainted secret number value; treat as nil if so
+    do
+      local taintOk = pcall(function() return (count or 0) > 0 end)
+      if not taintOk then count = nil end
+    end
 
     return charges, maxCharges, startTime, duration, unifiedCooldownBecauseRune,
            startTimeCooldown, durationCooldown, cooldownBecauseRune, startTimeCharges, durationCharges,
