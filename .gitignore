@@ -16,3 +16,4 @@ WeakAurasOptions/Libs/*
 .lua/*
 .vscode
 CHANGELOG.MD
+setup_dev.ps1
