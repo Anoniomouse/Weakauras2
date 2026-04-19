@@ -411,6 +411,7 @@ end
 WeakAuras.versionString = versionStringFromToc
 WeakAuras.buildTime = buildTime
 WeakAuras.newFeatureString = "|TInterface\\OptionsFrame\\UI-OptionsFrame-NewFeatureIcon:0|t"
+WeakAuras.combatRestrictedString = "|cFFFF8000[!]|r "
 WeakAuras.BuildInfo = select(4, GetBuildInfo())
 
 ---@return boolean result

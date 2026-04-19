@@ -5623,7 +5623,8 @@ Private.event_prototypes = {
       },
       {
         name = "remaining",
-        display = L["Remaining Time"],
+        display = WeakAuras.combatRestrictedString .. L["Remaining Time"],
+        desc = L["Cooldown timer accuracy is reduced in combat due to WoW 12.x API restrictions. Use 'Not on Cooldown' to reliably show/hide based on cooldown state."],
         type = "number",
         enable = function(trigger) return (trigger.genericShowOn ~= "showOnReady") end
       },
@@ -6048,7 +6049,8 @@ Private.event_prototypes = {
       },
       {
         name = "remaining",
-        display = L["Remaining Time"],
+        display = WeakAuras.combatRestrictedString .. L["Remaining Time"],
+        desc = L["Cooldown timer accuracy is reduced in combat due to WoW 12.x API restrictions. Use 'Not on Cooldown' to reliably show/hide based on cooldown state."],
         type = "number",
         enable = function(trigger) return (trigger.genericShowOn ~= "showOnReady") end,
         init = "remaining"
@@ -6280,7 +6282,8 @@ Private.event_prototypes = {
       },
       {
         name = "remaining",
-        display = L["Remaining Time"],
+        display = WeakAuras.combatRestrictedString .. L["Remaining Time"],
+        desc = L["Cooldown timer accuracy is reduced in combat due to WoW 12.x API restrictions. Use 'Not on Cooldown' to reliably show/hide based on cooldown state."],
         type = "number",
         enable = function(trigger) return (trigger.genericShowOn ~= "showOnReady") end,
         init = "remaining"
