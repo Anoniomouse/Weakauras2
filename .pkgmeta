@@ -72,6 +72,7 @@ ignore:
   - stylua.toml
   - exclude_libs.txt
   - fetch_libs.ps1
+  - "*.py"
   - tests
   - WeakAuras/Libs/LibDeflate/docs
   - WeakAuras/Libs/LibDeflate/examples
