@@ -7,3 +7,5 @@ setmetatable(WeakAuras.L, {__index = function(self, key)
   return key
 end})
 
+L["Cooldown timer accuracy is reduced in combat due to WoW 12.x API restrictions. Use 'Not on Cooldown' to reliably show/hide based on cooldown state."] = "Cooldown timer accuracy is reduced in combat due to WoW 12.x API restrictions. Use 'Not on Cooldown' to reliably show/hide based on cooldown state."
+

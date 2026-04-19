@@ -2328,15 +2328,14 @@ do
   local shootDuration
 
   local function GetRuneDuration()
+    if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
+      return -100
+    end
     local runeDuration = -100;
     for id, _ in pairs(runes) do
       local _, duration = GetRuneCooldown(id);
       duration = duration or 0;
-      -- WoW 12.x: GetRuneCooldown may return a tainted secret number value; skip this rune
-      local taintOk = pcall(function() return duration > 0 end)
-      if taintOk then
-        runeDuration = duration > 0 and duration or runeDuration
-      end
+      runeDuration = duration > 0 and duration or runeDuration
     end
     return runeDuration
   end
@@ -2357,11 +2356,7 @@ do
         modRate = spellCooldownInfo.modRate
       end
     end
-    -- WoW 12.x: GetSpellCooldown may return "secret" tainted values; skip GCD tracking this cycle
-    do
-      local taintOk = pcall(function() return duration and duration > 0 end)
-      if not taintOk then return end
-    end
+    if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then return end
 
     if(duration and duration > 0) then
       if not(gcdStart) then
@@ -3263,53 +3258,52 @@ do
   ---@type fun()
   ---@return number
   function Private.CheckRuneCooldown()
+    if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
+      return
+    end
     local runeDuration = -100;
     for id, _ in pairs(runes) do
       local startTime, duration = GetRuneCooldown(id);
       startTime = startTime or 0;
       duration = duration or 0;
-      -- WoW 12.x: GetRuneCooldown may return a tainted secret number value; skip this rune this cycle
-      local taintOk = pcall(function() return duration > 0 end)
-      if taintOk then
-        runeDuration = duration > 0 and duration or runeDuration
-        local time = GetTime();
+      runeDuration = duration > 0 and duration or runeDuration
+      local time = GetTime();
 
-        if(not startTime or startTime == 0) then
-          startTime = 0
-          duration = 0
+      if(not startTime or startTime == 0) then
+        startTime = 0
+        duration = 0
+      end
+
+      if(duration > 0 and duration ~= WeakAuras.gcdDuration()) then
+        -- On non-GCD cooldown
+        local endTime = startTime + duration;
+
+        if not(runeCdExps[id]) then
+          -- New cooldown
+          runeCdDurs[id] = duration;
+          runeCdExps[id] = endTime;
+          runeCdHandles[id] = timer:ScheduleTimerFixed(RuneCooldownFinished, endTime - time, id);
+          Private.ScanEvents("RUNE_COOLDOWN_STARTED", id);
+        elseif(runeCdExps[id] ~= endTime) then
+          -- Cooldown is now different
+          if(runeCdHandles[id]) then
+            timer:CancelTimer(runeCdHandles[id]);
+          end
+          runeCdDurs[id] = duration;
+          runeCdExps[id] = endTime;
+          runeCdHandles[id] = timer:ScheduleTimerFixed(RuneCooldownFinished, endTime - time, id);
+          Private.ScanEvents("RUNE_COOLDOWN_CHANGED", id);
         end
-
-        if(duration > 0 and duration ~= WeakAuras.gcdDuration()) then
-          -- On non-GCD cooldown
-          local endTime = startTime + duration;
-
-          if not(runeCdExps[id]) then
-            -- New cooldown
-            runeCdDurs[id] = duration;
-            runeCdExps[id] = endTime;
-            runeCdHandles[id] = timer:ScheduleTimerFixed(RuneCooldownFinished, endTime - time, id);
-            Private.ScanEvents("RUNE_COOLDOWN_STARTED", id);
-          elseif(runeCdExps[id] ~= endTime) then
-            -- Cooldown is now different
-            if(runeCdHandles[id]) then
-              timer:CancelTimer(runeCdHandles[id]);
-            end
-            runeCdDurs[id] = duration;
-            runeCdExps[id] = endTime;
-            runeCdHandles[id] = timer:ScheduleTimerFixed(RuneCooldownFinished, endTime - time, id);
-            Private.ScanEvents("RUNE_COOLDOWN_CHANGED", id);
+      elseif(duration > 0) then
+      -- GCD, do nothing
+      else
+        if(runeCdExps[id]) then
+          -- Somehow CheckCooldownReady caught the rune cooldown before the timer callback
+          -- This shouldn't happen, but if it does, no problem
+          if(runeCdHandles[id]) then
+            timer:CancelTimer(runeCdHandles[id]);
           end
-        elseif(duration > 0) then
-        -- GCD, do nothing
-        else
-          if(runeCdExps[id]) then
-            -- Somehow CheckCooldownReady caught the rune cooldown before the timer callback
-            -- This shouldn't happen, but if it does, no problem
-            if(runeCdHandles[id]) then
-              timer:CancelTimer(runeCdHandles[id]);
-            end
-            RuneCooldownFinished(id);
-          end
+          RuneCooldownFinished(id);
         end
       end
     end
@@ -3353,34 +3347,24 @@ do
     modRate = modRate or 1.0;
     modRateCharges = modRateCharges or 1.0;
 
-    -- WoW 12.x: GetSpellCharges may return tainted secret number values; reset charges data if so
-    do
-      local taintOk = pcall(function() return durationCharges > 0 end)
-      if not taintOk then
-        charges, maxCharges, startTimeCharges, durationCharges, modRateCharges = nil, nil, 0, 0, 1.0
+    -- WoW 12.x: When cooldowns are restricted, GetSpellCooldown/GetSpellCharges/GetSpellCount
+    -- return secret number values that cannot be compared or used for timing.
+    -- In this state: use IsZero() for binary on/off only; timing is unavailable.
+    -- Out of this state: all values are clean and timing works normally.
+    local count
+    if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
+      charges, maxCharges, startTimeCharges, durationCharges, modRateCharges = nil, nil, 0, 0, 1.0
+      local cdDuration = C_Spell.GetSpellCooldownDuration and C_Spell.GetSpellCooldownDuration(id)
+      if cdDuration == nil or cdDuration:IsZero() then
+        durationCooldown = 0
+        startTimeCooldown = 0
+      else
+        durationCooldown = 0
+        startTimeCooldown = 1
       end
-    end
-
-    -- WoW 12.x: C_Spell.GetSpellCooldown may return "secret" tainted values after a protected action
-    -- (e.g. TargetNearestEnemy). Comparisons throw a taint error caught by pcall (returns false).
-    -- Use C_Spell.GetSpellCooldownDuration():IsZero() as an untainted "is ready" oracle, then fall
-    -- back to GetSpellBaseCooldown for the duration value when the spell is actually on CD.
-    do
-      local taintOk = pcall(function() return durationCooldown > 0 end)
-      if not taintOk then
-        local cdDuration = C_Spell.GetSpellCooldownDuration and C_Spell.GetSpellCooldownDuration(id)
-        -- nil = no active cooldown (spell is ready); non-nil IsZero() = also ready
-        local isReady = cdDuration == nil or cdDuration:IsZero()
-        if isReady then
-          durationCooldown = 0
-          startTimeCooldown = 0
-        else
-          local baseDurationMs = GetSpellBaseCooldown and GetSpellBaseCooldown(id) or 0
-          durationCooldown = baseDurationMs / 1000
-          startTimeCooldown = durationCooldown > 0 and GetTime() or 0
-        end
-        modRate = 1.0
-      end
+      modRate = 1.0
+    else
+      count = GetSpellCount(id)
     end
 
     -- WORKAROUND: Sometimes the API returns very high bogus numbers causing client freezes, discard them here. CurseForge issue #1008
@@ -3438,13 +3422,6 @@ do
       end
     end
 
-    local count = GetSpellCount(id)
-    -- WoW 12.x: GetSpellCount may return a tainted secret number value; treat as nil if so
-    do
-      local taintOk = pcall(function() return (count or 0) > 0 end)
-      if not taintOk then count = nil end
-    end
-
     return charges, maxCharges, startTime, duration, unifiedCooldownBecauseRune,
            startTimeCooldown, durationCooldown, cooldownBecauseRune, startTimeCharges, durationCharges,
            count, unifiedModRate, modRate, modRateCharges, not enabled
@@ -3474,11 +3451,7 @@ do
     end
     startTime = startTime or 0;
     duration = duration or 0;
-    -- WoW 12.x: GetItemCooldown may return "secret" tainted values; skip item CD tracking this cycle
-    do
-      local taintOk = pcall(function() return duration > 0 end)
-      if not taintOk then return end
-    end
+    if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then return end
     if (duration == 0) then
       enabled = 1;
     end
@@ -3548,11 +3521,7 @@ do
     itemSlotsEnable[id] = enable;
     startTime = startTime or 0;
     duration = duration or 0;
-    -- WoW 12.x: GetInventoryItemCooldown may return "secret" tainted values; skip this cycle
-    do
-      local taintOk = pcall(function() return duration > 0 end)
-      if not taintOk then return end
-    end
+    if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then return end
     local time = GetTime();
 
     -- We check against 1.5 and gcdDuration, as apparently the durations might not match exactly.
@@ -3656,11 +3625,7 @@ do
         duration = 0
       end
 
-      -- WoW 12.x: GetRuneCooldown may return a tainted secret number value; skip initial setup
-      do
-        local taintOk = pcall(function() return duration > 0 end)
-        if not taintOk then duration = 0 end
-      end
+      if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then duration = 0 end
 
       if(duration > 0 and duration ~= WeakAuras.gcdDuration()) then
         local time = GetTime();
@@ -3738,11 +3703,7 @@ do
         local startTime, duration, enabled = C_Container.GetItemCooldown(id);
         startTime = startTime or 0;
         duration = duration or 0;
-        -- WoW 12.x: GetItemCooldown may return "secret" tainted values; skip initial CD setup this cycle
-        do
-          local taintOk = pcall(function() return duration > 0 end)
-          if not taintOk then return end
-        end
+        if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then return end
         if (duration == 0) then
           enabled = 1;
         end
@@ -3800,11 +3761,7 @@ do
 
           duration = duration or 0;
           startTime = startTime or 0;
-          -- WoW 12.x: GetInventoryItemCooldown may return "secret" tainted values; skip initial CD setup this cycle
-          do
-            local taintOk = pcall(function() return duration > 0 end)
-            if not taintOk then return end
-          end
+          if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then return end
 
           if(duration > 0 and duration > 1.5 and duration ~= WeakAuras.gcdDuration()) then
             local time = GetTime();
