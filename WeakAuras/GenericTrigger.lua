@@ -2327,8 +2327,6 @@ do
   local shootStart
   local shootDuration
 
-  local spellCDCache = {} -- [spellId] = { startTime, duration } last clean values when unrestricted
-
   local function GetRuneDuration()
     if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
       return -100
@@ -3319,10 +3317,13 @@ do
   end
   local GetSpellCount = GetSpellCount or C_Spell.GetSpellCastCount
 
+  -- Cache of last known clean (non-secret) cooldown timing per spell id
+  local spellCDCache = {}
+
   ---@param id string
   ---@param runeDuration? number
   function WeakAuras.GetSpellCooldownUnified(id, runeDuration)
-    local startTimeCooldown, durationCooldown, enabled, modRate, isActive
+    local startTimeCooldown, durationCooldown, enabled, modRate
     if GetSpellCooldown then
       startTimeCooldown, durationCooldown, enabled, modRate = GetSpellCooldown(id)
       if type(enabled) == "number" then
@@ -3335,7 +3336,6 @@ do
         durationCooldown = spellCooldownInfo.duration
         enabled = spellCooldownInfo.isEnabled
         modRate = spellCooldownInfo.modRate
-        isActive = spellCooldownInfo.isActive
       end
     end
 
@@ -3351,19 +3351,30 @@ do
     modRateCharges = modRateCharges or 1.0;
 
     -- WoW 12.x: When cooldowns are restricted, GetSpellCooldown/GetSpellCharges/GetSpellCount
-    -- return secret number values that cannot be compared or used for timing.
-    -- isActive is non-secret. Use cached clean timing when available; fall back to
-    -- a fake future expiration only if the spell went on CD during the restricted window.
+    -- return secret number values that cannot be safely compared. Use isOnGCD (NeverSecret)
+    -- to ignore GCD, cached clean values for own CDs started before restriction, and isActive
+    -- as a fallback for own CDs started during restriction.
     local count
     if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
       charges, maxCharges, startTimeCharges, durationCharges, modRateCharges = nil, nil, 0, 0, 1.0
-      local cache = spellCDCache[id]
-      local cacheValid = cache and cache.duration > 0 and (cache.startTime + cache.duration) > GetTime()
-      if cacheValid then
-        startTimeCooldown = cache.startTime
-        durationCooldown = cache.duration
+      local isActive = false
+      local isOnGCD = false
+      if not GetSpellCooldown then
+        local spellCooldownInfo = C_Spell.GetSpellCooldown(id)
+        if spellCooldownInfo then
+          isActive = spellCooldownInfo.isActive or false
+          isOnGCD = spellCooldownInfo.isOnGCD or false
+        end
+      end
+      local cached = spellCDCache[id]
+      if isOnGCD then
+        -- Spell is only on GCD, own cooldown is done → treat as ready
+        startTimeCooldown = 0
+        durationCooldown = 0
+      elseif cached and cached[1] + cached[2] > GetTime() then
+        startTimeCooldown = cached[1]
+        durationCooldown = cached[2]
       elseif isActive then
-        -- Spell used during restricted state: no real timing available
         startTimeCooldown = GetTime()
         durationCooldown = 3600
       else
@@ -3372,8 +3383,8 @@ do
       end
       modRate = 1.0
     else
+      spellCDCache[id] = {startTimeCooldown, durationCooldown}
       count = GetSpellCount(id)
-      spellCDCache[id] = { startTime = startTimeCooldown, duration = durationCooldown }
     end
 
     -- WORKAROUND: Sometimes the API returns very high bogus numbers causing client freezes, discard them here. CurseForge issue #1008
