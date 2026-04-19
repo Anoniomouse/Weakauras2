@@ -3369,7 +3369,8 @@ do
       local taintOk = pcall(function() return durationCooldown > 0 end)
       if not taintOk then
         local cdDuration = C_Spell.GetSpellCooldownDuration and C_Spell.GetSpellCooldownDuration(id)
-        local isReady = cdDuration and cdDuration:IsZero()
+        -- nil = no active cooldown (spell is ready); non-nil IsZero() = also ready
+        local isReady = cdDuration == nil or cdDuration:IsZero()
         if isReady then
           durationCooldown = 0
           startTimeCooldown = 0
