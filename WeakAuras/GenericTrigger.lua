@@ -2332,7 +2332,11 @@ do
     for id, _ in pairs(runes) do
       local _, duration = GetRuneCooldown(id);
       duration = duration or 0;
-      runeDuration = duration > 0 and duration or runeDuration
+      -- WoW 12.x: GetRuneCooldown may return a tainted secret number value; skip this rune
+      local taintOk = pcall(function() return duration > 0 end)
+      if taintOk then
+        runeDuration = duration > 0 and duration or runeDuration
+      end
     end
     return runeDuration
   end
@@ -3264,6 +3268,11 @@ do
       local startTime, duration = GetRuneCooldown(id);
       startTime = startTime or 0;
       duration = duration or 0;
+      -- WoW 12.x: GetRuneCooldown may return a tainted secret number value; skip this rune this cycle
+      do
+        local taintOk = pcall(function() return duration > 0 end)
+        if not taintOk then goto continue end
+      end
       runeDuration = duration > 0 and duration or runeDuration
       local time = GetTime();
 
@@ -3304,6 +3313,7 @@ do
           RuneCooldownFinished(id);
         end
       end
+      ::continue::
     end
     return runeDuration;
   end
@@ -3344,6 +3354,14 @@ do
 
     modRate = modRate or 1.0;
     modRateCharges = modRateCharges or 1.0;
+
+    -- WoW 12.x: GetSpellCharges may return tainted secret number values; reset charges data if so
+    do
+      local taintOk = pcall(function() return durationCharges > 0 end)
+      if not taintOk then
+        charges, maxCharges, startTimeCharges, durationCharges, modRateCharges = nil, nil, 0, 0, 1.0
+      end
+    end
 
     -- WoW 12.x: C_Spell.GetSpellCooldown may return "secret" tainted values after a protected action
     -- (e.g. TargetNearestEnemy). Comparisons throw a taint error caught by pcall (returns false).
@@ -3629,6 +3647,12 @@ do
       if(not startTime or startTime == 0) then
         startTime = 0
         duration = 0
+      end
+
+      -- WoW 12.x: GetRuneCooldown may return a tainted secret number value; skip initial setup
+      do
+        local taintOk = pcall(function() return duration > 0 end)
+        if not taintOk then duration = 0 end
       end
 
       if(duration > 0 and duration ~= WeakAuras.gcdDuration()) then
