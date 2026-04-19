@@ -3355,7 +3355,7 @@ do
     if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
       charges, maxCharges, startTimeCharges, durationCharges, modRateCharges = nil, nil, 0, 0, 1.0
       local cdDuration = C_Spell.GetSpellCooldownDuration and C_Spell.GetSpellCooldownDuration(id)
-      if cdDuration == nil or cdDuration:IsZero() then
+      if cdDuration == nil then
         durationCooldown = 0
         startTimeCooldown = 0
       else
