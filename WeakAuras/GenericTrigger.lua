@@ -2356,7 +2356,7 @@ do
     -- WoW 12.x: GetSpellCooldown may return "secret" tainted values; skip GCD tracking this cycle
     do
       local taintOk = pcall(function() return duration and duration > 0 end)
-      if taintOk == nil then return end
+      if not taintOk then return end
     end
 
     if(duration and duration > 0) then
@@ -3346,11 +3346,11 @@ do
     modRateCharges = modRateCharges or 1.0;
 
     -- WoW 12.x: C_Spell.GetSpellCooldown may return "secret" tainted values after a protected action
-    -- (e.g. TargetNearestEnemy). Comparisons with secret values throw uncatchable errors — pcall
-    -- returns nil (not false) in that case. Detect this and replace with untainted fallbacks.
+    -- (e.g. TargetNearestEnemy). Comparisons throw a taint error caught by pcall (returns false).
+    -- Detect this and replace with untainted fallbacks.
     do
       local taintOk = pcall(function() return durationCooldown > 0 end)
-      if taintOk == nil then
+      if not taintOk then
         local baseDurationMs = GetSpellBaseCooldown and GetSpellBaseCooldown(id) or 0
         durationCooldown = baseDurationMs / 1000
         startTimeCooldown = durationCooldown > 0 and GetTime() or 0
@@ -3447,7 +3447,7 @@ do
     -- WoW 12.x: GetItemCooldown may return "secret" tainted values; skip item CD tracking this cycle
     do
       local taintOk = pcall(function() return duration > 0 end)
-      if taintOk == nil then return end
+      if not taintOk then return end
     end
     if (duration == 0) then
       enabled = 1;
@@ -3521,7 +3521,7 @@ do
     -- WoW 12.x: GetInventoryItemCooldown may return "secret" tainted values; skip this cycle
     do
       local taintOk = pcall(function() return duration > 0 end)
-      if taintOk == nil then return end
+      if not taintOk then return end
     end
     local time = GetTime();
 
@@ -3705,7 +3705,7 @@ do
         -- WoW 12.x: GetItemCooldown may return "secret" tainted values; skip initial CD setup this cycle
         do
           local taintOk = pcall(function() return duration > 0 end)
-          if taintOk == nil then return end
+          if not taintOk then return end
         end
         if (duration == 0) then
           enabled = 1;
@@ -3767,7 +3767,7 @@ do
           -- WoW 12.x: GetInventoryItemCooldown may return "secret" tainted values; skip initial CD setup this cycle
           do
             local taintOk = pcall(function() return duration > 0 end)
-            if taintOk == nil then return end
+            if not taintOk then return end
           end
 
           if(duration > 0 and duration > 1.5 and duration ~= WeakAuras.gcdDuration()) then
