@@ -73,6 +73,7 @@ ignore:
   - exclude_libs.txt
   - fetch_libs.ps1
   - "*.py"
+  - setup_dev.ps1
   - tests
   - WeakAuras/Libs/LibDeflate/docs
   - WeakAuras/Libs/LibDeflate/examples
