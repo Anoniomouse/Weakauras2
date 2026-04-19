@@ -1064,6 +1064,8 @@ globals = {
 	"C_SharedCharacterServices.SetStartAutomatically",
 	"C_Seasons",
 	"C_Seasons.GetActiveSeason",
+	"C_Secrets",
+	"C_Secrets.ShouldCooldownsBeSecret",
 	"C_Social",
 	"C_Social.GetLastAchievement",
 	"C_Social.GetLastItem",
