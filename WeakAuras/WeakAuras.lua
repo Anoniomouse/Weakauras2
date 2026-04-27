@@ -1254,10 +1254,13 @@ local function CheckForPreviousEncounter()
     for i = 1, 10 do
       if (UnitExists ("boss" .. i)) then
         local guid = UnitGUID ("boss" .. i)
-        if (guid and db.CurrentEncounter.boss_guids [guid]) then
-          -- we are in the same encounter
-          WeakAuras.CurrentEncounter = db.CurrentEncounter
-          return true
+        if guid then
+          local ok, isBossGuid = pcall(function() return db.CurrentEncounter.boss_guids[guid] end)
+          if ok and isBossGuid then
+            -- we are in the same encounter
+            WeakAuras.CurrentEncounter = db.CurrentEncounter
+            return true
+          end
         end
       end
     end
@@ -1536,7 +1539,7 @@ local function StoreBossGUIDs()
       if (UnitExists ("boss" .. i)) then
         local guid = UnitGUID ("boss" .. i)
         if (guid) then
-          WeakAuras.CurrentEncounter.boss_guids [guid] = true
+          pcall(function() WeakAuras.CurrentEncounter.boss_guids[guid] = true end)
         end
       end
     end
@@ -6314,7 +6317,10 @@ end
 --- @return boolean?
 function Private.UnitPlayerControlledFixed(unit)
   local guid = UnitGUID(unit)
-  return guid and guid:sub(1, 6) == "Player"
+  if not guid then return false end
+  -- guid may be secret in WoW 12.x restricted state; :sub() on a secret value can fail
+  local ok, result = pcall(function() return guid:sub(1, 6) == "Player" end)
+  return ok and result
 end
 
 do

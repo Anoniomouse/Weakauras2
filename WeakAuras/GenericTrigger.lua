@@ -4105,8 +4105,14 @@ function WeakAuras.WatchUnitChange(unit)
   watchUnitChange.unitExists[unit] = UnitExists(unit)
 
   if guid then
-    watchUnitChange.GUIDToUnitIds[guid] = watchUnitChange.GUIDToUnitIds[guid] or {}
-    watchUnitChange.GUIDToUnitIds[guid][unit] = true
+    -- In WoW 12.x restricted state, UnitGUID returns a secret value that can't be a table key.
+    -- Wrap the write; on failure clear unitIdToGUID so unitUpdate doesn't later use the secret value as a write key.
+    if not pcall(function()
+      watchUnitChange.GUIDToUnitIds[guid] = watchUnitChange.GUIDToUnitIds[guid] or {}
+      watchUnitChange.GUIDToUnitIds[guid][unit] = true
+    end) then
+      watchUnitChange.unitIdToGUID[unit] = nil
+    end
   end
   watchUnitChange.raidmark = watchUnitChange.raidmark or {}
   watchUnitChange.raidmark[unit] = GetRaidTargetIndex(unit) or 0

@@ -318,13 +318,19 @@ local function ReferenceMatchDataMulti(matchData, id, triggernum, destGUID)
 end
 
 local function MatchesTriggerInfoMulti(triggerInfo, sourceGUID)
-  if triggerInfo.ownOnly then
-    return sourceGUID == UnitGUID("player") or sourceGUID == UnitGUID("pet")
-  elseif triggerInfo.ownOnly == false then
-    return sourceGUID ~= UnitGUID("player") and sourceGUID ~= UnitGUID("pet")
-  else
+  if triggerInfo.ownOnly == nil then
     return true
   end
+  -- UnitGUID("player"/"pet") may be secret in WoW 12.x restricted state; sourceGUID (combat log) is not.
+  -- Comparing secret with non-secret can fail — default to true (show all) to avoid silently dropping auras.
+  local ok, result = pcall(function()
+    if triggerInfo.ownOnly then
+      return sourceGUID == UnitGUID("player") or sourceGUID == UnitGUID("pet")
+    else
+      return sourceGUID ~= UnitGUID("player") and sourceGUID ~= UnitGUID("pet")
+    end
+  end)
+  return not ok or result
 end
 
 local function CheckScanFuncs(scanFuncs, unit, filter, key)
@@ -3926,10 +3932,15 @@ end
 
 local function SetUID(guid, unit)
   ReleaseUID(unit)
-
   unitToGuid[unit] = guid
-  guidToUnit[guid] = guidToUnit[guid] or {}
-  guidToUnit[guid][unit] = true
+  -- In WoW 12.x restricted state, UnitGUID returns a secret value that can't be a table key.
+  -- Wrap the write; on failure undo unitToGuid so ReleaseUID doesn't later inherit the bad guid.
+  if not pcall(function()
+    guidToUnit[guid] = guidToUnit[guid] or {}
+    guidToUnit[guid][unit] = true
+  end) then
+    unitToGuid[unit] = nil
+  end
 end
 
 local function GetUnit(guid)
@@ -3937,7 +3948,8 @@ local function GetUnit(guid)
     return nil
   end
   for unit in pairs(guidToUnit[guid]) do
-    if UnitGUID(unit) == guid then
+    local ok, matches = pcall(function() return UnitGUID(unit) == guid end)
+    if ok and matches then
       return unit
     else
       guidToUnit[guid][unit] = nil
