@@ -5392,8 +5392,11 @@ Private.event_prototypes = {
           end
         end
         if (charges == nil) then
-          -- Use fake charges for spells that use GetSpellCooldown
-          charges = (duration == 0 or gcdCooldown) and 1 or 0;
+          if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
+            charges = Private.ExecEnv.IsUsableSpell(spellname or "") and 1 or 0;
+          else
+            charges = (duration == 0 or gcdCooldown) and 1 or 0;
+          end
         end
         local genericShowOn = %s
         local expirationTime = startTime and duration and startTime + duration
@@ -6797,7 +6800,11 @@ Private.event_prototypes = {
                        or spellCount and spellCount > 0 and spellCount
                        or nil
         if (charges == nil) then
-          charges = (duration == 0 or gcdCooldown) and 1 or 0;
+          if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
+            charges = Private.ExecEnv.IsUsableSpell(spellName or "") and 1 or 0;
+          else
+            charges = (duration == 0 or gcdCooldown) and 1 or 0;
+          end
         end
         local ready = (startTime == 0 and not paused) or charges > 0
         local active = Private.ExecEnv.IsUsableSpell(spellName or "") and ready
