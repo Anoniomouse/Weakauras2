@@ -3319,43 +3319,26 @@ do
 
   -- Cache of last known clean (non-secret) cooldown timing per spell id
   local spellCDCache = {}
+  -- Cache of DurationObject for spells whose CD started during restriction (no clean timing available).
+  -- Only populated in the isActive-but-no-cache restricted fallback; nil in all other cases.
+  local spellCDDuration = {}
 
   ---@param id string
   ---@param runeDuration? number
   function WeakAuras.GetSpellCooldownUnified(id, runeDuration)
     local startTimeCooldown, durationCooldown, enabled, modRate
-    if GetSpellCooldown then
-      startTimeCooldown, durationCooldown, enabled, modRate = GetSpellCooldown(id)
-      if type(enabled) == "number" then
-        enabled = enabled == 1 and true or false
-      end
-    else
-      local spellCooldownInfo = C_Spell.GetSpellCooldown(id);
-      if spellCooldownInfo then
-        startTimeCooldown = spellCooldownInfo.startTime
-        durationCooldown = spellCooldownInfo.duration
-        enabled = spellCooldownInfo.isEnabled
-        modRate = spellCooldownInfo.modRate
-      end
-    end
-
-    local charges, maxCharges, startTimeCharges, durationCharges, modRateCharges = GetSpellCharges(id);
-
-    startTimeCooldown = startTimeCooldown or 0;
-    durationCooldown = durationCooldown or 0;
-
-    startTimeCharges = startTimeCharges or 0;
-    durationCharges = durationCharges or 0;
-
-    modRate = modRate or 1.0;
-    modRateCharges = modRateCharges or 1.0;
-
-    -- WoW 12.x: When cooldowns are restricted, GetSpellCooldown/GetSpellCharges/GetSpellCount
-    -- return secret number values that cannot be safely compared. Use isOnGCD (NeverSecret)
-    -- to ignore GCD, cached clean values for own CDs started before restriction, and isActive
-    -- as a fallback for own CDs started during restriction.
+    local charges, maxCharges, startTimeCharges, durationCharges, modRateCharges
     local count
+
+    -- WoW 12.x: Check restriction before calling any cooldown APIs. Secret APIs return
+    -- opaque values that cannot be compared or used arithmetically. Use only NeverSecret
+    -- fields (isOnGCD, isActive) and cached clean values from the last unrestricted call.
+    -- If restrictions are lifted in a future patch, ShouldCooldownsBeSecret() returns false
+    -- and the normal path runs all APIs unchanged.
     if C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
+      -- Restricted path: do not call GetSpellCooldown/GetSpellCharges/GetSpellCount —
+      -- their return values are secret and cannot be used safely.
+      enabled = true
       charges, maxCharges, startTimeCharges, durationCharges, modRateCharges = nil, nil, 0, 0, 1.0
       local isActive = false
       local isOnGCD = false
@@ -3371,19 +3354,55 @@ do
         -- Spell is only on GCD, own cooldown is done → treat as ready
         startTimeCooldown = 0
         durationCooldown = 0
+        spellCDDuration[id] = nil
       elseif cached and cached[1] + cached[2] > GetTime() then
         startTimeCooldown = cached[1]
         durationCooldown = cached[2]
+        spellCDDuration[id] = nil
       elseif isActive then
+        -- CD started during restriction: no clean timing available. Use a DurationObject
+        -- so the display layer can call FormatRemainingDuration for an accurate countdown
+        -- string without touching secret values (12.0.5+: SecretWhenNumericFormatterSecret).
         startTimeCooldown = GetTime()
         durationCooldown = 3600
+        if C_Spell.GetSpellCooldownDuration then
+          spellCDDuration[id] = C_Spell.GetSpellCooldownDuration(id, true)
+        end
       else
         startTimeCooldown = 0
         durationCooldown = 0
+        spellCDDuration[id] = nil
       end
       modRate = 1.0
     else
+      -- Normal path: all standard APIs available and returning clean values.
+      if GetSpellCooldown then
+        startTimeCooldown, durationCooldown, enabled, modRate = GetSpellCooldown(id)
+        if type(enabled) == "number" then
+          enabled = enabled == 1 and true or false
+        end
+      else
+        local spellCooldownInfo = C_Spell.GetSpellCooldown(id);
+        if spellCooldownInfo then
+          startTimeCooldown = spellCooldownInfo.startTime
+          durationCooldown = spellCooldownInfo.duration
+          enabled = spellCooldownInfo.isEnabled
+          modRate = spellCooldownInfo.modRate
+        end
+      end
+
+      charges, maxCharges, startTimeCharges, durationCharges, modRateCharges = GetSpellCharges(id);
+
+      startTimeCooldown = startTimeCooldown or 0;
+      durationCooldown = durationCooldown or 0;
+      startTimeCharges = startTimeCharges or 0;
+      durationCharges = durationCharges or 0;
+      modRate = modRate or 1.0;
+      modRateCharges = modRateCharges or 1.0;
+
+      -- Cache clean timing for restricted-state fallback; clear stale DurationObject.
       spellCDCache[id] = {startTimeCooldown, durationCooldown}
+      spellCDDuration[id] = nil
       count = GetSpellCount(id)
     end
 
@@ -3445,6 +3464,12 @@ do
     return charges, maxCharges, startTime, duration, unifiedCooldownBecauseRune,
            startTimeCooldown, durationCooldown, cooldownBecauseRune, startTimeCharges, durationCharges,
            count, unifiedModRate, modRate, modRateCharges, not enabled
+  end
+
+  -- Returns a DurationObject for spells whose CD started during restricted state (12.0.5+).
+  -- nil in all other cases, including when clean cached timing is available.
+  function WeakAuras.GetSpellCooldownDurationObj(id)
+    return spellCDDuration[id]
   end
 
   ---@type fun(id, runeDuration)

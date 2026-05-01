@@ -5401,6 +5401,7 @@ Private.event_prototypes = {
         local genericShowOn = %s
         local expirationTime = startTime and duration and startTime + duration
         state.spellname = spellname;
+        state.cooldownDuration = WeakAuras.GetSpellCooldownDurationObj and WeakAuras.GetSpellCooldownDurationObj(effectiveSpellId) or nil;
       ]=]):format(
         spellName,
         (trigger.use_matchedRune and "true" or "false"),

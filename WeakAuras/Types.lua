@@ -557,6 +557,19 @@ Private.format_types = {
           if not state or state.progressType ~= "timed" then
             return value
           end
+          -- For %p in restricted state with a live DurationObject (CD started during
+          -- restriction, no clean cached timing), FormatRemainingDuration returns an
+          -- accurate non-tainted countdown string (12.0.5+: SecretWhenNumericFormatterSecret).
+          if sym == "p" and state.cooldownDuration
+             and C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret() then
+            if not Private.restrictedSecondsFormatter
+               and C_StringUtil and C_StringUtil.CreateSecondsFormatter then
+              Private.restrictedSecondsFormatter = C_StringUtil.CreateSecondsFormatter()
+            end
+            if Private.restrictedSecondsFormatter then
+              return state.cooldownDuration:FormatRemainingDuration(Private.restrictedSecondsFormatter)
+            end
+          end
           return formatter(value, state, trigger)
         end, next(timePointProperty) ~= nil
       else
