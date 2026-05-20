@@ -3227,6 +3227,11 @@ if not WeakAuras.IsClassicEra() then
     [241] = L["Lorewalking"],
     [237] = WeakAuras.IsMists() and L["Dungeon (Celestial)"] or unused,
     [244] = L["25 Player Raid (Titan Reforged)"],
+    [245] = L["Decor Duel"],
+    [247] = L["Decor Duel"],
+    [248] = unused, -- RENAME Event (placeholder name)
+    [251] = L["Decor Duel"],
+    [253] = L["Decor Duel"],
   }
 
   Private.instance_difficulty_types[0] =L["None"]
