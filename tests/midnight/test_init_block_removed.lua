@@ -21,7 +21,9 @@ describe("Init.lua Midnight Load Block (Phase 1.2)", function()
   end)
 
   it("does not contain the Midnight load block (libsAreOk = false)", function()
-    assert.is_nil(content:match("IsMidnight%(%)"),
+    -- IsMidnight() is legitimately defined and used for CLEU_EVENT selection;
+    -- only an IsMidnight() check that immediately disables loading is forbidden
+    assert.is_nil(content:match("IsMidnight%(%)[^\n]*\n[^\n]*libsAreOk%s*=%s*false"),
       "Should not have IsMidnight() check that sets libsAreOk = false")
   end)
 

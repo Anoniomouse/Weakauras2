@@ -5,7 +5,7 @@ describe("UnitAura API Migration (Midnight)", function()
   local mock = require("tests.midnight.mock_wow_api")
 
   local function makeAura(overrides)
-    return {
+    local aura = {
       name = "Test Aura",
       icon = 12345,
       applications = 1,
@@ -21,6 +21,12 @@ describe("UnitAura API Migration (Midnight)", function()
       isHelpful = true,
       isHarmful = false,
     }
+    if overrides then
+      for k, v in pairs(overrides) do
+        aura[k] = v
+      end
+    end
+    return aura
   end
 
   before_each(function()
