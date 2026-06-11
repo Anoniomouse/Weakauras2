@@ -417,6 +417,18 @@ local function modify(parent, region, data)
     region:UpdateEffectiveInverse()
   end
 
+  local function ApplyCooldown(start, duration, modRate)
+    -- In restricted combat the numeric timing values are placeholders; a
+    -- DurationObject carries the real engine-side timing (WoW 12.0.5+)
+    if cooldown.durationObj and cooldown.SetCooldownFromDurationObject
+       and C_Secrets and C_Secrets.ShouldCooldownsBeSecret and C_Secrets.ShouldCooldownsBeSecret()
+    then
+      cooldown:SetCooldownFromDurationObject(cooldown.durationObj)
+    else
+      cooldown:SetCooldown(start, duration, modRate)
+    end
+  end
+
   function region:UpdateEffectiveInverse()
     -- If cooldown.inverse == false then effectiveReverse = not inverse
     -- If cooldown.inverse == true then effectiveReverse = inverse
@@ -425,9 +437,9 @@ local function modify(parent, region, data)
     if (cooldown.expirationTime and cooldown.duration and cooldown:IsShown()) then
       -- WORKAROUND SetReverse not applying until next frame
       cooldown:SetCooldown(0, 0)
-      cooldown:SetCooldown(cooldown.expirationTime - cooldown.duration,
-                           cooldown.duration,
-                           cooldown.useCooldownModRate and cooldown.modRate or nil)
+      ApplyCooldown(cooldown.expirationTime - cooldown.duration,
+                    cooldown.duration,
+                    cooldown.useCooldownModRate and cooldown.modRate or nil)
     end
   end
 
@@ -571,6 +583,7 @@ local function modify(parent, region, data)
       cooldown.value = self.value
       cooldown.total = self.total
       cooldown.modRate = nil
+      cooldown.durationObj = nil
       if (self.value >= 0 and self.value <= self.total) then
         cooldown:Show()
         cooldown:SetCooldown(GetTime() - (self.total - self.value), self.total)
@@ -592,13 +605,15 @@ local function modify(parent, region, data)
         cooldown.duration = self.duration
         cooldown.modRate = self.modRate
         cooldown.inverse = self.inverse
+        cooldown.durationObj = self.cooldownDurationObj
         region:UpdateEffectiveInverse()
-        cooldown:SetCooldown(self.expirationTime - self.duration, self.duration,
-                             cooldown.useCooldownModRate and self.modRate or nil)
+        ApplyCooldown(self.expirationTime - self.duration, self.duration,
+                      cooldown.useCooldownModRate and self.modRate or nil)
       else
         cooldown.expirationTime = self.expirationTime
         cooldown.duration = self.duration
         cooldown.modRate = self.modRate
+        cooldown.durationObj = nil
         cooldown:Hide();
       end
     end
@@ -606,9 +621,9 @@ local function modify(parent, region, data)
     function region:PreShow()
       if (cooldown.duration and cooldown.duration > 0.01 and cooldown.duration ~= math.huge and cooldown.expirationTime ~= math.huge) then
         cooldown:Show();
-        cooldown:SetCooldown(cooldown.expirationTime - cooldown.duration,
-                             cooldown.duration,
-                             cooldown.useCooldownModRate and cooldown.modRate or nil);
+        ApplyCooldown(cooldown.expirationTime - cooldown.duration,
+                      cooldown.duration,
+                      cooldown.useCooldownModRate and cooldown.modRate or nil);
         cooldown:Resume()
       end
     end

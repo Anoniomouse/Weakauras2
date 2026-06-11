@@ -417,6 +417,7 @@ local function UpdateProgressFromState(self, minMaxConfig, state, progressSource
     self.inverse = false
     self.paused = true
     self.remaining = math.huge
+    self.cooldownDurationObj = nil
     if self.UpdateTime then
       self:UpdateTime()
     end
@@ -452,6 +453,7 @@ local function UpdateProgressFromState(self, minMaxConfig, state, progressSource
     self.progressType = "static"
     self.value = value - adjustMin
     self.total = max - adjustMin
+    self.cooldownDurationObj = nil
     if self.UpdateValue then
       self:UpdateValue()
     end
@@ -509,6 +511,7 @@ local function UpdateProgressFromState(self, minMaxConfig, state, progressSource
     self.modRate = modRate
     self.inverse = inverse
     self.paused = paused
+    self.cooldownDurationObj = state.cooldownDuration
     if self.UpdateTime then
       self:UpdateTime()
     end
@@ -548,6 +551,7 @@ local function UpdateProgressFromState(self, minMaxConfig, state, progressSource
     self.inverse = true
     self.paused = false
     self.remaining = nil
+    self.cooldownDurationObj = nil
     if self.UpdateTime then
       self:UpdateTime()
     end
@@ -577,6 +581,7 @@ local function UpdateProgressFromAuto(self, minMaxConfig, state)
     self.inverse = false
     self.paused = true
     self.remaining = math.huge
+    self.cooldownDurationObj = nil
     if self.UpdateTime then
       self:UpdateTime()
     end
@@ -609,6 +614,7 @@ local function UpdateProgressFromManual(self, minMaxConfig, state, value, total)
   self.progressType = "static"
   self.value = value - adjustMin
   self.total = max - adjustMin
+  self.cooldownDurationObj = nil
   if self.UpdateValue then
     self:UpdateValue()
   end
