@@ -3232,6 +3232,9 @@ if not WeakAuras.IsClassicEra() then
     [248] = unused, -- RENAME Event (placeholder name)
     [251] = L["Decor Duel"],
     [253] = L["Decor Duel"],
+    [233] = L["Raid (Mythic Flexible)"], -- "Mythic - Flexible Raiding" (15-25, Heroic World Tier)
+    [254] = unused, -- "Naigtal" 5-player scenario (pre-release codename)
+    [257] = L["Raid (Timewalking)"], -- Timewalking raid (10-30)
   }
 
   Private.instance_difficulty_types[0] =L["None"]

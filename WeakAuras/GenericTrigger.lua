@@ -2046,9 +2046,9 @@ end
 
 -- Swing timer support code
 do
-  local mh = GetInventorySlotInfo("MainHandSlot")
-  local oh = GetInventorySlotInfo("SecondaryHandSlot")
-  local ranged = WeakAuras.IsClassicOrTBCOrWrath() and GetInventorySlotInfo("RangedSlot")
+  local mh = INVSLOT_MAINHAND
+  local oh = INVSLOT_OFFHAND
+  local ranged = WeakAuras.IsClassicOrTBCOrWrath() and INVSLOT_RANGED
 
   local swingTimerFrame;
   local lastSwingMain, lastSwingOff, lastSwingRange;
@@ -4354,8 +4354,8 @@ end
 do
   local hasRanged = WeakAuras.IsClassicOrTBCOrWrathOrCata()
 
-  local mh = GetInventorySlotInfo("MainHandSlot")
-  local oh = GetInventorySlotInfo("SecondaryHandSlot")
+  local mh = INVSLOT_MAINHAND
+  local oh = INVSLOT_OFFHAND
 
   local mh_name, mh_shortenedName, mh_exp, mh_dur, mh_charges, mh_EnchantID;
   ---@type string?
@@ -4368,7 +4368,7 @@ do
   local rw, rw_icon, rw_exp, rw_dur, rw_name, rw_shortenedName, rw_charges, rw_EnchantID;
   ---@type string?
   if hasRanged then
-    rw = GetInventorySlotInfo("RANGEDSLOT")
+    rw = INVSLOT_RANGED
     rw_icon = GetInventoryItemTexture("player", rw) or "Interface\\Icons\\INV_Misc_QuestionMark"
   end
 
@@ -4437,7 +4437,20 @@ do
       local function tenchUpdate()
         Private.StartProfileSystem("generictrigger temporary enchant");
         local _, mh_rem, oh_rem, rw_rem
-        _, mh_rem, mh_charges, mh_EnchantID, _, oh_rem, oh_charges, oh_EnchantID, _, rw_rem, rw_charges, rw_EnchantID = GetWeaponEnchantInfo();
+        if C_PaperDollInfo and C_PaperDollInfo.GetTemporaryEnchantmentInfo then
+          -- WoW 12.1 removed GetWeaponEnchantInfo; query the per-slot enchant struct instead.
+          local function slotTench(slot)
+            local info = slot and C_PaperDollInfo.GetTemporaryEnchantmentInfo(slot)
+            if info then
+              return info.remainingTimeMs, info.chargesRemaining, info.enchantID
+            end
+          end
+          mh_rem, mh_charges, mh_EnchantID = slotTench(mh)
+          oh_rem, oh_charges, oh_EnchantID = slotTench(oh)
+          rw_rem, rw_charges, rw_EnchantID = slotTench(rw)
+        else
+          _, mh_rem, mh_charges, mh_EnchantID, _, oh_rem, oh_charges, oh_EnchantID, _, rw_rem, rw_charges, rw_EnchantID = GetWeaponEnchantInfo();
+        end
         local time = GetTime();
         local mh_exp_new = mh_rem and (time + (mh_rem / 1000));
         local oh_exp_new = oh_rem and (time + (oh_rem / 1000));

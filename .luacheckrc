@@ -873,6 +873,7 @@ globals = {
 	"C_NewItems.ClearAll",
 	"C_NewItems.IsNewItem",
 	"C_NewItems.RemoveNewItem",
+	"C_PaperDollInfo",
 	"C_PetBattles",
 	"C_PetBattles.AcceptPVPDuel",
 	"C_PetBattles.AcceptQueuedPVPMatch",

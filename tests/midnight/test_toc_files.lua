@@ -34,12 +34,12 @@ describe("Mainline TOC Files (Phase 1)", function()
         assert.is_not_nil(content, "TOC file not found: " .. tocDef.path)
       end)
 
-      it("has a Midnight Interface version (1200xx)", function()
+      it("has a Midnight Interface version (120xxx)", function()
         if not content then return end
         local interface = getField(content, "Interface")
         assert.is_not_nil(interface, "Interface field missing")
-        assert.is_not_nil(interface:match("^1200%d%d"),
-          "Expected Midnight interface (1200xx), got " .. tostring(interface))
+        assert.is_not_nil(interface:match("^120%d%d%d"),
+          "Expected Midnight interface (120xxx), got " .. tostring(interface))
       end)
 
       if tocDef.expectedFlavor then
