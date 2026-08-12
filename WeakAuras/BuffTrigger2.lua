@@ -109,6 +109,26 @@ local function makeSecretSafe(fn)
   end
 end
 
+-- On 12.1, the UNIT_AURA updateInfo table carries secret fields while execution
+-- is tainted: reading updateInfo.isFullUpdate returns a secret boolean, and a
+-- direct boolean test on it raises "attempt to perform boolean test on ... a
+-- secret boolean value". Probe it under pcall; if we can't read it (secret, i.e.
+-- restricted combat) treat it as a full update, which routes to a plain ScanUnit
+-- that already honors the restricted-combat freeze-and-skip path.
+local function auraUpdateTestFull(updateInfo)
+  if updateInfo.isFullUpdate then return true end
+  return false
+end
+local function ShouldFullAuraScan(updateInfo)
+  if updateInfo == nil then return true end
+  if not WeakAuras.IsMidnight() then
+    return updateInfo.isFullUpdate and true or false
+  end
+  local ok, isFull = pcall(auraUpdateTestFull, updateInfo)
+  if not ok then return true end
+  return isFull
+end
+
 -- Lua APIs
 local tinsert, wipe = table.insert, wipe
 local pairs, next, type = pairs, next, type
@@ -2389,8 +2409,8 @@ local function EventHandler(frame, event, arg1, arg2, ...)
 
     if newAPI then
       -- arg1: unit
-      -- arg2: unitAuraUpdateInfo
-      if arg2 == nil or arg2.isFullUpdate then
+      -- arg2: unitAuraUpdateInfo (isFullUpdate is a secret boolean when tainted on 12.1)
+      if ShouldFullAuraScan(arg2) then
         ScanUnit(time, arg1)
       else
         ScanUnit(time, arg1, arg2)
